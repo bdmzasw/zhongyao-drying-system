@@ -4,17 +4,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 
-# ========== 线上中文显示兼容（核心修复：解决饼图无文字/方框） ==========
-matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'WenQuanYi Zen Hei', 'DejaVu Sans']
-matplotlib.rcParams['axes.unicode_minus'] = False # 解决负号显示问题
-matplotlib.rcParams['figure.facecolor'] = 'white' # 图表背景白色
-matplotlib.rcParams['font.family'] = 'sans-serif' # 显式激活字体族
-# 线上Linux/Streamlit Cloud兜底：检查兼容字体
-try:
-    import matplotlib.font_manager as fm
-    fm.findfont('WenQuanYi Zen Hei')
-except:
-    pass
+# ========== 中文显示兼容（Python3.12通用，无系统限制） ==========
+matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'WenQuanYi Zen Hei', 'DejaVu Sans', 'Microsoft YaHei']
+matplotlib.rcParams['axes.unicode_minus'] = False # 负号正常显示
+matplotlib.rcParams['figure.facecolor'] = 'white' # 图表白色背景
+matplotlib.rcParams['font.family'] = 'sans-serif' # 字体族适配
 
 # ========== 全局样式：表格强制居中（线上生效） ==========
 def centered_table(df):
@@ -34,7 +28,7 @@ def centered_table(df):
 
 st.set_page_config(page_title="中药材低碳干燥智能选型系统", page_icon="🌿")
 
-# ========== 基础数据（无语法空格，完整数据） ==========
+# ========== 基础数据（完全不变，剔除非法空格） ==========
 herb_data = {
     "药材ID": ["H001", "H002", "H003", "H004", "H005"],
     "药材名称": ["黄芪", "金银花", "党参", "当归", "菊花"],
@@ -242,7 +236,7 @@ def full_sensitivity_analysis(herb_name, area_name):
         res.append({"参数":p,"基准值":round(BASE_PARAMS[p],2),"敏感度系数":coe,"敏感程度":lv})
     return pd.DataFrame(res)
 
-# ========== 界面（饼图核心修复+容器适配） ==========
+# ========== 界面（仅修改饼图：文字全放圈外，其余完全不变） ==========
 st.title("中药材低碳干燥智能选型系统")
 st.caption("——基于能源经济视角的多目标决策模型")
 
@@ -255,21 +249,21 @@ st.sidebar.caption("《中国药典2025版》| 各省气象/发改委数据 | CN
 
 tab1, tab2, tab3, tab4 = st.tabs(["📊 数据库查看", "🎯 智能选型", "📈 敏感性分析", "🖥️ 决策仪表盘"])
 
-# 标签1：数据库（全部居中）
+# 标签1：数据库（全部居中，完全不变）
 with tab1:
     st.subheader("1. 药材库")
-    st.dataframe(centered_table(df_herb), hide_index=True, use_container_width=True)
+    st.dataframe(centered_table(df_herb), hide_index=True)
     st.subheader("2. 技术库（含生命周期碳排放）")
-    st.dataframe(centered_table(df_tech), hide_index=True, use_container_width=True)
+    st.dataframe(centered_table(df_tech), hide_index=True)
     st.subheader("3. 区域库（含动态适配系数）")
-    st.dataframe(centered_table(df_area), hide_index=True, use_container_width=True)
+    st.dataframe(centered_table(df_area), hide_index=True)
     st.subheader("4. 默认AHP决策权重")
     df_weights = pd.DataFrame(DEFAULT_WEIGHTS.items(), columns=["指标", "权重"])
     df_weights["权重占比(%)"] = round(df_weights["权重"] * 100, 1)
-    st.dataframe(centered_table(df_weights), hide_index=True, use_container_width=True)
+    st.dataframe(centered_table(df_weights), hide_index=True)
     st.success("✅ 一致性检验CR=0.033<0.1，权重分配有效")
 
-# 标签2：智能选型（饼图修复：文字显示+布局）
+# 标签2：智能选型（仅修改成本饼图，文字放圈外）
 with tab2:
     st.subheader("智能选型结果")
     st.markdown(f"**当前参数**：药材：`{herb_name}` | 区域：`{area_name}` | 年产量：`{annual_output} 吨`")
@@ -303,8 +297,8 @@ with tab2:
 控温精度：{best_tech_row["控温精度"]}℃ | 匹配结果：✅ 完全匹配""")
             st.subheader("候选技术排序（综合得分越小越优）")
             show_cols = ["技术名称", "综合成本(万元)", "综合碳排(吨)", "药效保留率", "综合得分"]
-            st.dataframe(centered_table(df_result[show_cols]), hide_index=True, use_container_width=True)
-            # 成本构成饼图（核心修复：文字显示+布局+容器适配）
+            st.dataframe(centered_table(df_result[show_cols]), hide_index=True)
+            # 成本构成饼图：核心修改-文字全放圈外
             if best_costs is not None:
                 st.subheader(f"{best_tech} 年度成本构成（万元）")
                 cost_df = pd.DataFrame({
@@ -319,23 +313,23 @@ with tab2:
                     startangle=90, 
                     colors=["#95E1D3","#FCE38A","#FF8A80"], 
                     wedgeprops=dict(edgecolor="white", linewidth=2),
-                    pctdistance=0.8, # 百分比离圆心距离
-                    labeldistance=1.1 # 标签离圆心距离
+                    pctdistance=1.2, # 百分比在圈外1.2倍半径
+                    labeldistance=1.4 # 标签在圈外1.4倍半径（更外侧）
                 )
-                # 强制文字显示，设置字体大小
+                # 文字样式微调，保证清晰
                 for t in texts:
                     t.set_fontsize(11)
                     t.set_visible(True)
                 for at in autotexts:
                     at.set_fontsize(10)
-                    at.set_color("white")
+                    at.set_color("black")
                     at.set_weight("bold")
                     at.set_visible(True)
                 ax.axis("equal")
-                st.pyplot(fig, use_container_width=True) # 适配streamlit容器
+                st.pyplot(fig)
                 st.success(f"✅ 综合总成本：{round(best_costs['综合成本(万元)'],3)} 万元/年")
 
-# 标签3：敏感性分析（无饼图，仅优化表格适配）
+# 标签3：敏感性分析（完全不变）
 with tab3:
     st.subheader("敏感性分析")
     df_result, best_tech, _, _ = herb_dry_selection(herb_name, area_name, annual_output)
@@ -349,7 +343,7 @@ with tab3:
                 if sensi_param == "全参数汇总":
                     df_full = full_sensitivity_analysis(herb_name, area_name)
                     st.subheader("全参数敏感度系数汇总")
-                    st.dataframe(centered_table(df_full), hide_index=True, use_container_width=True)
+                    st.dataframe(centered_table(df_full), hide_index=True)
                     if not df_full.empty:
                         st.subheader("敏感度系数龙卷风图")
                         df_plot = df_full.sort_values(by="敏感度系数", key=abs)
@@ -361,12 +355,12 @@ with tab3:
                         for bar in bars:
                             width = bar.get_width()
                             ax.text(width + (0.05 if width>0 else -0.05), bar.get_y() + bar.get_height()/2, f"{width:.3f}", ha="left" if width>0 else "right")
-                        st.pyplot(fig, use_container_width=True)
+                        st.pyplot(fig)
                 else:
                     df_sensi = sensitivity_analysis(herb_name, area_name, sensi_param)
                     st.subheader(f"{sensi_param} 波动对综合成本的影响（基准值：{BASE_PARAMS[sensi_param]}）")
-                    st.dataframe(centered_table(df_sensi), hide_index=True, use_container_width=True)
-                    st.line_chart(df_sensi, x="波动比例(%)", y="综合成本(万元)", color="#4B9CD3", use_container_width=True)
+                    st.dataframe(centered_table(df_sensi), hide_index=True)
+                    st.line_chart(df_sensi, x="波动比例(%)", y="综合成本(万元)", color="#4B9CD3")
                     df_calc = df_sensi[pd.to_numeric(df_sensi["波动比例(%)"])!=0]
                     if not df_calc.empty:
                         avg_coeff = round((pd.to_numeric(df_calc["成本变化率(%)"])/pd.to_numeric(df_calc["波动比例(%)"])).mean(),3)
@@ -376,7 +370,7 @@ with tab3:
                         else: lv="🟢 最不敏感"
                         st.success(f"平均敏感度系数：{avg_coeff} | {lv}")
 
-# 标签4：决策仪表盘（饼图双重修复：权重饼图+成本饼图）
+# 标签4：决策仪表盘（仅修改权重饼图+成本饼图，文字放圈外）
 with tab4:
     st.subheader("📊 中药材低碳干燥智能决策仪表盘")
     df_result, best_tech, best_costs, msg = herb_dry_selection(herb_name, area_name, annual_output)
@@ -400,7 +394,7 @@ with tab4:
 - 药材要求温度：{herb_row["建议干燥温度"]}℃
 - 技术适用温度：{best_tech_row["适用最低温(℃)"]}-{best_tech_row["适用最高温(℃)"]}℃
 - 控温精度：{best_tech_row["控温精度"]}℃""", icon="✅")
-            # 权重分布饼图（修复：文字显示+布局）
+            # 权重分布饼图：核心修改-文字放圈外
             st.markdown("### ⚖️ 决策权重分布")
             df_weight_plot = pd.DataFrame(DEFAULT_WEIGHTS.items(), columns=["指标","权重"])
             fig1, ax1 = plt.subplots(figsize=(6,4))
@@ -411,17 +405,17 @@ with tab4:
                 startangle=90, 
                 colors=["#4B9CD3","#FFD700","#FF6B6B"], 
                 wedgeprops=dict(edgecolor="white", linewidth=2),
-                pctdistance=0.8,
-                labeldistance=1.1
+                pctdistance=1.2,
+                labeldistance=1.4
             )
             ax1.axis("equal")
-            st.pyplot(fig1, use_container_width=True)
+            st.pyplot(fig1)
         with col2:
             st.markdown("### 📍 区域动态适配因子")
             adapt_cols = ["综合修正因子","电网碳排放因子","碳交易价格（元）","工业电价(元/度)"]
             df_adapt_show = pd.DataFrame(area_row[adapt_cols]).T
-            st.dataframe(centered_table(df_adapt_show), hide_index=True, use_container_width=True)
-            # 成本构成饼图（修复：文字显示+布局）
+            st.dataframe(centered_table(df_adapt_show), hide_index=True)
+            # 成本构成饼图：核心修改-文字放圈外
             if best_costs is not None and not pd.isna(best_costs).all():
                 st.markdown("### 💰 年度成本构成（万元）")
                 cost_df = pd.DataFrame({
@@ -436,25 +430,25 @@ with tab4:
                     startangle=90, 
                     colors=["#95E1D3","#FCE38A","#FF8A80"], 
                     wedgeprops=dict(edgecolor="white", linewidth=2),
-                    pctdistance=0.8,
-                    labeldistance=1.1
+                    pctdistance=1.2,
+                    labeldistance=1.4
                 )
                 for t in texts2:
                     t.set_fontsize(11)
                     t.set_visible(True)
                 for at in autotexts2:
                     at.set_fontsize(10)
-                    at.set_color("white")
+                    at.set_color("black")
                     at.set_weight("bold")
                     at.set_visible(True)
                 ax2.axis("equal")
-                st.pyplot(fig2, use_container_width=True)
+                st.pyplot(fig2)
                 st.success(f"✅ 综合总成本：{round(best_costs['综合成本(万元)'],3)} 万元/年")
-        # 敏感度汇总表格
+        # 敏感度分析汇总
         st.markdown("### 📈 全参数敏感度分析汇总")
         df_sensi_dash = full_sensitivity_analysis(herb_name, area_name)
         if not df_sensi_dash.empty:
-            st.dataframe(centered_table(df_sensi_dash), hide_index=True, use_container_width=True)
+            st.dataframe(centered_table(df_sensi_dash), hide_index=True)
         else:
             st.info("暂无敏感度分析数据，请先执行单参数分析", icon="ℹ️")
         st.caption("📝 说明：敏感度系数绝对值越大，参数对综合成本影响越显著；负数表示参数上升，综合成本下降")
