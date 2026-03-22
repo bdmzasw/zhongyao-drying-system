@@ -4,14 +4,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 
-# ========== 终极中文适配（Windows / Mac / Linux / GitHub / Streamlit 全部兼容） ==========
-matplotlib.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei', 'SimHei', 'Microsoft YaHei', 'DejaVu Sans']
-matplotlib.rcParams['axes.unicode_minus'] = False
-matplotlib.rcParams['figure.facecolor'] = 'white'
-matplotlib.rcParams['font.family'] = 'sans-serif'
+# ========== 终极根治中文方框 + 清缓存 ==========
+plt.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei', 'Noto Sans CJK SC']
+plt.rcParams['axes.unicode_minus'] = False
+plt.rcParams['figure.facecolor'] = 'white'
+plt.rcParams['font.family'] = 'sans-serif'
+matplotlib.font_manager._rebuild() # 强制刷新字体缓存（解决顽固方框）
 
-# ========== 表格强制居中 ==========
+# ========== 表格居中 + 全局统一 3 位小数 ==========
 def centered_table(df):
+    df = df.round(3) # 全局强制 3 位小数
     return df.style.set_properties(**{
         'text-align': 'center',
         'vertical-align': 'middle',
@@ -51,8 +53,8 @@ tech_data = {
     "控温精度": ["±1", "±3", "±5", "±2", "±1"],
     "最小能耗(kWh/kg水)": [1.0, 1.6, 2.2, 1.3, 1.2],
     "最大能耗(kWh/kg水)": [1.3, 2.0, 2.8, 1.6, 1.5],
-    "药效保留率": [0.93, 0.90, 0.82, 0.88, 0.95],
-    "平均能耗系数": [1.15, 1.8, 2.5, 1.45, 1.35],
+    "药效保留率": [0.930, 0.900, 0.820, 0.880, 0.950],
+    "平均能耗系数": [1.150, 1.800, 2.500, 1.450, 1.350],
     "设备平均投资(万元)": [12, 8, 3.5, 10, 18],
     "适用药材部位": ["根，茎，果实", "花，叶", "通用", "根，茎，果实", "根，贵重药材"]
 }
@@ -65,7 +67,7 @@ area_data = {
     "年均湿度(%)": [63, 78, 70, 58, 76, 82, 79, 73],
     "年均风速（m/s）": [2.5, 2.0, 2.2, 2.8, 2.1, 1.5, 2.3, 2.4],
     "年降水量（mm）": [400, 800, 500, 200, 1400, 900, 1700, 1000],
-    "工业电价(元/度)": [0.51, 0.64, 0.65, 0.51, 0.63, 0.54, 0.64, 0.41],
+    "工业电价(元/度)": [0.510, 0.640, 0.650, 0.510, 0.630, 0.540, 0.640, 0.410],
     "设备补贴比例（%）": [20, 0, 10, 15, 0, 0, 0, 10],
     "主要药材类型": ["党参，黄芪", "白芍，牡丹皮", "白芷，山药", "枸杞，黄芪", "杭白菊", "川穹，川贝", "广藿香", "三七"],
     "数据来源": ["中国气象数据网"]*8
@@ -74,33 +76,34 @@ df_area = pd.DataFrame(area_data)
 
 adapt_data = {
     "区域名称": ["甘肃定西", "安徽亳州", "河北安国", "宁夏中卫", "浙江杭州", "四川成都", "广东广州", "云南昆明"],
-    "湿度修正系数": [0.98, 1.13, 1.05, 0.93, 1.11, 1.17, 1.14, 1.08],
-    "电价修正系数": [0.98, 1.24, 1.25, 0.98, 1.21, 1.04, 1.23, 0.79],
-    "设备补贴系数": [0.80, 1.00, 0.90, 0.85, 1.00, 1.00, 1.00, 0.90],
-    "碳交易价格（元）": [81.58, 81.58, 81.58, 81.58, 81.58, 81.58, 38.84, 81.58],
-    "综合修正因子": [0.77, 1.40, 1.18, 0.78, 1.35, 1.22, 1.40, 0.77],
-    "电网碳排放因子": [0.6671, 0.7035, 0.9029, 0.6671, 0.5246, 0.5257, 0.4512, 0.5271]
+    "湿度修正系数": [0.980, 1.130, 1.050, 0.930, 1.110, 1.170, 1.140, 1.080],
+    "电价修正系数": [0.980, 1.240, 1.250, 0.980, 1.210, 1.040, 1.230, 0.790],
+    "设备补贴系数": [0.800, 1.000, 0.900, 0.850, 1.000, 1.000, 1.000, 0.900],
+    "碳交易价格（元）": [81.580, 81.580, 81.580, 81.580, 81.580, 81.580, 38.840, 81.580],
+    "综合修正因子": [0.770, 1.400, 1.180, 0.780, 1.350, 1.220, 1.400, 0.770],
+    "电网碳排放因子": [0.667, 0.704, 0.903, 0.667, 0.525, 0.526, 0.451, 0.527]
 }
 df_adapt = pd.DataFrame(adapt_data)
 df_area = pd.merge(df_area, df_adapt, on="区域名称", how="left")
 
 carbon_data = {
     "技术名称": ["热泵干燥", "红外干燥", "传统热风", "微波干燥", "真空干燥"],
-    "设备制造碳（吨）": [8.2, 4.8, 2.1, 6.3, 11.5],
-    "运输碳（吨）": [0.1, 0.075, 0.05, 0.09, 0.125],
-    "年使用碳（吨）": [409.36, 640.74, 889.91, 516.15, 480.55],
-    "废弃碳（吨）": [0.4, 0.3, 0.2, 0.36, 0.5],
+    "设备制造碳（吨）": [8.200, 4.800, 2.100, 6.300, 11.500],
+    "运输碳（吨）": [0.100, 0.075, 0.050, 0.090, 0.125],
+    "年使用碳（吨）": [409.360, 640.740, 889.910, 516.150, 480.550],
+    "废弃碳（吨）": [0.400, 0.300, 0.200, 0.360, 0.500],
     "寿命（年）": [15, 10, 10, 12, 15],
-    "年均全周期碳（吨）": [317.96, 497.28, 690.18, 400.73, 373.38]
+    "年均全周期碳（吨）": [317.960, 497.280, 690.180, 400.730, 373.380]
 }
 df_carbon = pd.DataFrame(carbon_data)
 df_tech = pd.merge(df_tech, df_carbon, on="技术名称", how="left")
 
-# ========== 常量与函数 ==========
+# ========== 常量 ==========
 DEFAULT_WEIGHTS = {"成本": 0.260, "碳排放": 0.106, "药效保留": 0.633}
-BASE_PARAMS = {"电价": 0.57, "年产量": 800.0, "设备投资": 10.3, "能耗系数": 1.65, "碳交易价格": 76.24}
+BASE_PARAMS = {"电价": 0.570, "年产量": 800.000, "设备投资": 10.300, "能耗系数": 1.650, "碳交易价格": 76.240}
 FLUCTUATIONS = [-0.2, -0.1, 0, 0.1, 0.2]
 
+# ========== 函数 ==========
 def parse_herb_temp(temp_str):
     if "≤" in temp_str:
         min_temp = 0
@@ -131,7 +134,7 @@ def calc_total_cost(tech_row, area_row, herb_tons_water, annual_output=800):
 
 def normalize_series(s):
     if s.max() == s.min() or s.max() - s.min() < 1e-6:
-        return pd.Series([0.0]*len(s), index=s.index)
+        return pd.Series([0.000]*len(s), index=s.index)
     return (s - s.min()) / (s.max() - s.min())
 
 def herb_dry_selection(herb_name, area_name, annual_output=800, custom_weights=None):
@@ -154,16 +157,16 @@ def herb_dry_selection(herb_name, area_name, annual_output=800, custom_weights=N
         if df_tech_filter.empty:
             return None, None, None, "无匹配温度的干燥技术！"
         cost_cols = df_tech_filter.apply(lambda x: calc_total_cost(x, area_row, herb_tons_water, annual_output), axis=1)
-        df_tech_filter["综合成本(万元)"] = [x[0] for x in cost_cols]
-        df_tech_filter["设备折旧(万元)"] = [x[1] for x in cost_cols]
-        df_tech_filter["能耗成本(万元)"] = [x[2] for x in cost_cols]
-        df_tech_filter["碳交易成本(万元)"] = [x[3] for x in cost_cols]
+        df_tech_filter["综合成本(万元)"] = [round(x[0],3) for x in cost_cols]
+        df_tech_filter["设备折旧(万元)"] = [round(x[1],3) for x in cost_cols]
+        df_tech_filter["能耗成本(万元)"] = [round(x[2],3) for x in cost_cols]
+        df_tech_filter["碳交易成本(万元)"] = [round(x[3],3) for x in cost_cols]
         df_tech_filter["综合碳排(吨)"] = round(df_tech_filter["年均全周期碳（吨）"] * area_row["综合修正因子"], 3)
         df_tech_filter["药效得分"] = df_tech_filter["药效保留率"]
         df_tech_filter["成本归一化"] = normalize_series(df_tech_filter["综合成本(万元)"])
         df_tech_filter["碳排归一化"] = normalize_series(df_tech_filter["综合碳排(吨)"])
         df_tech_filter["药效归一化"] = normalize_series(df_tech_filter["药效得分"])
-        df_tech_filter["综合得分"] = (weights["成本"] * df_tech_filter["成本归一化"] + weights["碳排放"] * df_tech_filter["碳排归一化"] + weights["药效保留"] * (1 - df_tech_filter["药效归一化"])).round(6)
+        df_tech_filter["综合得分"] = round((weights["成本"] * df_tech_filter["成本归一化"] + weights["碳排放"] * df_tech_filter["碳排归一化"] + weights["药效保留"] * (1 - df_tech_filter["药效归一化"])), 3)
         df_result = df_tech_filter.sort_values("综合得分", ascending=True).reset_index(drop=True)
         best_tech = df_result.iloc[0]["技术名称"] if not df_result.empty else None
         best_costs = df_result.iloc[0][["设备折旧(万元)", "能耗成本(万元)", "碳交易成本(万元)", "综合成本(万元)"]] if not df_result.empty else None
@@ -206,7 +209,7 @@ def sensitivity_analysis(herb_name, area_name, base_param, fluct_ratios=[-0.2,-0
                 ar = area_row.copy()
                 ar["碳交易价格（元）"] = val
                 cost,_,_,_ = calc_total_cost(tech_row, ar, herb_tons_water)
-            chg = round((cost-base_cost)/base_cost*100,2) if base_cost !=0 else 0
+            chg = round((cost-base_cost)/base_cost*100,3) if base_cost !=0 else 0
             data.append({"分析参数":base_param,"波动比例(%)":f"{fr*100:.0f}","参数值":val,"综合成本(万元)":round(cost,3),"成本变化率(%)":chg})
         return pd.DataFrame(data)
     except:
@@ -225,10 +228,10 @@ def full_sensitivity_analysis(herb_name, area_name):
         elif abs(coe)>=0.5: lv="🟡 高敏感"
         elif abs(coe)>=0.1: lv="⚪ 一般"
         else: lv="🟢 最不敏感"
-        res.append({"参数":p,"基准值":round(BASE_PARAMS[p],2),"敏感度系数":coe,"敏感程度":lv})
+        res.append({"参数":p,"基准值":round(BASE_PARAMS[p],3),"敏感度系数":coe,"敏感程度":lv})
     return pd.DataFrame(res)
 
-# ========== 界面开始 ==========
+# ========== 界面 ==========
 st.title("中药材低碳干燥智能选型系统")
 st.caption("——基于能源经济视角的多目标决策模型")
 
@@ -251,11 +254,11 @@ with tab1:
     st.dataframe(centered_table(df_area), hide_index=True)
     st.subheader("4. 默认AHP决策权重")
     df_weights = pd.DataFrame(DEFAULT_WEIGHTS.items(), columns=["指标", "权重"])
-    df_weights["权重占比(%)"] = round(df_weights["权重"] * 100, 1)
+    df_weights["权重占比(%)"] = round(df_weights["权重"] * 100, 3)
     st.dataframe(centered_table(df_weights), hide_index=True)
     st.success("✅ 一致性检验CR=0.033<0.1，权重分配有效")
 
-# Tab2（已修复饼图：中文+居中）
+# Tab2
 with tab2:
     st.subheader("智能选型结果")
     st.markdown(f"**当前参数**：药材：`{herb_name}` | 区域：`{area_name}` | 年产量：`{annual_output} 吨`")
@@ -294,13 +297,13 @@ with tab2:
                 st.subheader(f"{best_tech} 年度成本构成（万元）")
                 cost_df = pd.DataFrame({
                     "成本类型":["设备折旧","能耗成本","碳交易成本"],
-                    "金额":[best_costs["设备折旧(万元)"],best_costs["能耗成本(万元)"],best_costs["碳交易成本(万元)"]]
+                    "金额":[round(best_costs["设备折旧(万元)"],3),round(best_costs["能耗成本(万元)"],3),round(best_costs["碳交易成本(万元)"],3)]
                 })
                 fig, ax = plt.subplots(figsize=(6,6))
                 wedges, texts, autotexts = ax.pie(
                     cost_df["金额"],
                     labels=cost_df["成本类型"],
-                    autopct='%1.2f%%',
+                    autopct='%1.3f%%',
                     startangle=90,
                     colors=["#95E1D3","#FCE38A","#FF8A80"],
                     wedgeprops=dict(edgecolor="white", linewidth=2),
@@ -340,7 +343,7 @@ with tab3:
                         fig, ax = plt.subplots(figsize=(8,4))
                         bars = ax.barh(df_plot["参数"], df_plot["敏感度系数"], color=["#FF4B4B" if x<0 else "#4B9CD3" for x in df_plot["敏感度系数"]])
                         ax.axvline(x=0, color="black", linestyle="--", alpha=0.5, linewidth=1)
-                        ax.set_xlabel("敏感度系数")
+                        ax.set_xlabel("敏感度系数", fontfamily="WenQuanYi Zen Hei")
                         ax.set_title("各参数对综合成本的敏感度影响", fontfamily="WenQuanYi Zen Hei")
                         for bar in bars:
                             width = bar.get_width()
@@ -361,7 +364,7 @@ with tab3:
                         else: lv="🟢 最不敏感"
                         st.success(f"平均敏感度系数：{avg_coeff} | {lv}")
 
-# Tab4（两处饼图全部修复）
+# Tab4
 with tab4:
     st.subheader("📊 中药材低碳干燥智能决策仪表盘")
     df_result, best_tech, best_costs, msg = herb_dry_selection(herb_name, area_name, annual_output)
@@ -371,7 +374,7 @@ with tab4:
         herb_row = df_herb[df_herb["药材名称"] == herb_name].iloc[0]
         area_row = df_area[df_area["区域名称"] == area_name].iloc[0]
         best_tech_row = df_tech[df_tech["技术名称"] == best_tech].iloc[0]
-        best_score = df_result[df_result["技术名称"] == best_tech]["综合得分"].iloc[0] if not df_result.empty else 0
+        best_score = round(df_result[df_result["技术名称"] == best_tech]["综合得分"].iloc[0],3) if not df_result.empty else 0
         herb_min, herb_max = parse_herb_temp(herb_row["建议干燥温度"])
         col1, col2 = st.columns(2, gap="medium")
         with col1:
@@ -379,7 +382,7 @@ with tab4:
             st.info(f"""- 药材名称：{herb_name}
 - 种植区域：{area_name}
 - 推荐技术：**{best_tech}**
-- 综合得分：**{round(best_score,3)}**（越小越优）""", icon="ℹ️")
+- 综合得分：**{best_score}**（越小越优）""", icon="ℹ️")
             st.markdown("### 🌡️ 温度匹配详情")
             st.success(f"""✅ 匹配结果：完全匹配
 - 药材要求温度：{herb_row["建议干燥温度"]}℃
@@ -391,7 +394,7 @@ with tab4:
             ax1.pie(
                 df_weight_plot["权重"],
                 labels=df_weight_plot["指标"],
-                autopct='%1.1f%%',
+                autopct='%1.3f%%',
                 startangle=90,
                 colors=["#4B9CD3","#FFD700","#FF6B6B"],
                 wedgeprops=dict(edgecolor="white", linewidth=2),
@@ -411,13 +414,13 @@ with tab4:
                 st.markdown("### 💰 年度成本构成（万元）")
                 cost_df = pd.DataFrame({
                     "成本类型":["设备折旧","能耗成本","碳交易成本"],
-                    "金额":[best_costs["设备折旧(万元)"],best_costs["能耗成本(万元)"],best_costs["碳交易成本(万元)"]]
+                    "金额":[round(best_costs["设备折旧(万元)"],3),round(best_costs["能耗成本(万元)"],3),round(best_costs["碳交易成本(万元)"],3)]
                 })
                 fig2, ax2 = plt.subplots(figsize=(6,6))
                 wedges2, texts2, autotexts2 = ax2.pie(
                     cost_df["金额"],
                     labels=cost_df["成本类型"],
-                    autopct='%1.2f%%',
+                    autopct='%1.3f%%',
                     startangle=90,
                     colors=["#95E1D3","#FCE38A","#FF8A80"],
                     wedgeprops=dict(edgecolor="white", linewidth=2),
@@ -436,12 +439,15 @@ with tab4:
                 st.pyplot(fig2)
                 st.success(f"✅ 综合总成本：{round(best_costs['综合成本(万元)'],3)} 万元/年")
         st.markdown("### 📈 全参数敏感度分析汇总")
-        df_sensi_dash = full_sensitivity_analysis(herb_name, area_name)
-        if not df_sensi_dash.empty:
-            st.dataframe(centered_table(df_sensi_dash), hide_index=True)
+        df_si = full_sensitivity_analysis(herb_name, area_name)
+        if not df_si.empty:
+            st.dataframe(centered_table(df_si), hide_index=True)
         else:
             st.info("暂无敏感度分析数据，请先执行单参数分析", icon="ℹ️")
 
 st.markdown("---")
 st.caption("📚 本系统基于《中药材低碳干燥智能选型研究——基于能源经济视角的多目标决策模型》开发 | 一致性检验CR=0.033<0.1")
+
+
+
 
