@@ -7,61 +7,79 @@ import matplotlib.font_manager as fm
 import platform
 import os
 
-# ========== 强大的中文显示解决方案 ==========
+# ========== 更可靠的中文显示解决方案 ==========
 def setup_chinese_font():
-    """设置中文字体，解决饼图文字方框问题"""
-    # 获取系统信息
+    """强制设置中文字体，确保饼图文字正常显示"""
+    # 方法1：尝试使用系统中存在的常见中文字体
+    chinese_fonts = []
+    
+    # 根据操作系统获取可能的字体路径
     system = platform.system()
     
-    # 根据操作系统选择字体路径
-    font_paths = []
     if system == 'Windows':
-        font_paths = [
-            'C:/Windows/Fonts/simhei.ttf', # 黑体
-            'C:/Windows/Fonts/msyh.ttc', # 微软雅黑
-            'C:/Windows/Fonts/simsun.ttc', # 宋体
-            'C:/Windows/Fonts/simkai.ttf' # 楷体
+        chinese_fonts = [
+            'SimHei', # 黑体
+            'Microsoft YaHei', # 微软雅黑
+            'SimSun', # 宋体
+            'KaiTi', # 楷体
+            'FangSong' # 仿宋
         ]
+        # 尝试添加字体文件
+        font_dirs = ['C:/Windows/Fonts']
     elif system == 'Darwin': # macOS
-        font_paths = [
-            '/System/Library/Fonts/PingFang.ttc',
-            '/System/Library/Fonts/STHeiti Light.ttc',
-            '/Library/Fonts/Arial Unicode.ttf'
+        chinese_fonts = [
+            'PingFang SC',
+            'Heiti SC', 
+            'STHeiti',
+            'Songti SC',
+            'Arial Unicode MS'
         ]
+        font_dirs = ['/System/Library/Fonts', '/Library/Fonts']
     else: # Linux
-        font_paths = [
-            '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
-            '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
-            '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc'
+        chinese_fonts = [
+            'WenQuanYi Zen Hei',
+            'WenQuanYi Micro Hei',
+            'Noto Sans CJK SC',
+            'Droid Sans Fallback'
         ]
+        font_dirs = ['/usr/share/fonts/truetype/wqy', '/usr/share/fonts/opentype/noto']
     
-    # 尝试加载字体
-    font_found = False
-    for font_path in font_paths:
-        if os.path.exists(font_path):
-            try:
-                fm.fontManager.addfont(font_path)
-                prop = fm.FontProperties(fname=font_path)
-                font_name = prop.get_name()
-                matplotlib.rcParams['font.sans-serif'] = [font_name, 'DejaVu Sans']
-                matplotlib.rcParams['axes.unicode_minus'] = False
-                font_found = True
-                break
-            except:
-                continue
+    # 尝试从字体目录加载
+    for font_dir in font_dirs:
+        if os.path.exists(font_dir):
+            for root, dirs, files in os.walk(font_dir):
+                for file in files:
+                    if file.endswith(('.ttf', '.ttc', '.otf')):
+                        try:
+                            font_path = os.path.join(root, file)
+                            fm.fontManager.addfont(font_path)
+                        except:
+                            pass
     
-    # 如果没有找到特定字体，尝试使用通用中文字体
-    if not font_found:
-        chinese_fonts = ['SimHei', 'Microsoft YaHei', 'WenQuanYi Zen Hei', 'PingFang SC', 'STHeiti', 'Arial Unicode MS']
-        matplotlib.rcParams['font.sans-serif'] = chinese_fonts + ['DejaVu Sans']
-        matplotlib.rcParams['axes.unicode_minus'] = False
+    # 设置中文字体
+    matplotlib.rcParams['font.sans-serif'] = chinese_fonts + ['DejaVu Sans']
+    matplotlib.rcParams['axes.unicode_minus'] = False
+    matplotlib.rcParams['font.size'] = 11
+    
+    # 清除字体缓存
+    try:
+        fm._rebuild()
+    except:
+        pass
 
 # 初始化字体设置
 setup_chinese_font()
 
-# ========== 表格样式：强制居中 + 数值格式化 + 更美观的样式 ==========
+# 测试字体是否可用
+def test_chinese_font():
+    """测试中文字体是否可用"""
+    fig, ax = plt.subplots(figsize=(1, 1))
+    ax.text(0.5, 0.5, '测试', fontsize=12)
+    plt.close(fig)
+
+# ========== 表格样式：强制居中 ==========
 def centered_table(df):
-    """格式化表格，所有内容居中显示，数值保留合适小数位数"""
+    """格式化表格，所有内容居中显示"""
     df_display = df.copy()
     
     # 格式化数值列
@@ -100,20 +118,6 @@ def centered_table(df):
             'props': [
                 ('text-align', 'center'),
                 ('padding', '6px 8px')
-            ]
-        },
-        {
-            'selector': 'table',
-            'props': [
-                ('border-collapse', 'collapse'),
-                ('width', '100%'),
-                ('margin', '0 auto')
-            ]
-        },
-        {
-            'selector': 'tr:hover',
-            'props': [
-                ('background-color', '#f5f5f5')
             ]
         }
     ])
@@ -344,34 +348,46 @@ def full_sensitivity_analysis(herb_name, area_name):
     return pd.DataFrame(res)
 
 
-# ========== 绘制饼图的辅助函数（修复中文显示） ==========
-def draw_pie_chart(labels, values, title="", colors=None):
-    """绘制饼图，确保中文文字正常显示"""
-    # 每次绘图前重新设置字体
-    setup_chinese_font()
+# ========== 使用英文标签的饼图（临时解决方案） ==========
+def draw_pie_chart_english(labels, values, title="", colors=None):
+    """
+    临时解决方案：使用英文标签绘制饼图
+    这样就不会出现中文方框问题了
+    """
+    # 中文到英文的映射
+    label_map = {
+        "成本": "Cost",
+        "碳排放": "Carbon",
+        "药效保留": "Efficacy",
+        "设备折旧": "Depreciation",
+        "能耗成本": "Energy",
+        "碳交易成本": "Carbon Cost"
+    }
+    
+    # 转换标签为英文
+    eng_labels = [label_map.get(label, label) for label in labels]
     
     fig, ax = plt.subplots(figsize=(6, 4))
     
     if colors is None:
         colors = ["#95E1D3", "#FCE38A", "#FF8A80"]
     
-    # 绘制饼图，所有文字放在圈外
+    # 绘制饼图
     wedges, texts, autotexts = ax.pie(
         values,
-        labels=labels,
+        labels=eng_labels,
         autopct='%1.2f%%',
         startangle=90,
         colors=colors,
         wedgeprops=dict(edgecolor="white", linewidth=2),
-        pctdistance=1.2, # 百分比文字距离圆心距离（1.2倍半径）
-        labeldistance=1.4, # 标签文字距离圆心距离（1.4倍半径）
-        textprops={'fontsize': 11, 'fontweight': 'normal'}
+        pctdistance=1.2,
+        labeldistance=1.4,
+        textprops={'fontsize': 11}
     )
     
     # 设置文字样式
     for t in texts:
         t.set_fontsize(11)
-        t.set_fontweight('normal')
     
     for at in autotexts:
         at.set_fontsize(10)
@@ -380,7 +396,49 @@ def draw_pie_chart(labels, values, title="", colors=None):
     
     ax.axis("equal")
     if title:
-        ax.set_title(title, fontsize=12, pad=15)
+        ax.set_title(title, fontsize=12)
+    
+    plt.tight_layout()
+    return fig
+
+
+# ========== 绘制饼图（使用中文字体） ==========
+def draw_pie_chart(labels, values, title="", colors=None):
+    """绘制饼图，使用中文字体"""
+    # 重新设置字体
+    setup_chinese_font()
+    
+    fig, ax = plt.subplots(figsize=(6, 4))
+    
+    if colors is None:
+        colors = ["#95E1D3", "#FCE38A", "#FF8A80"]
+    
+    # 绘制饼图
+    wedges, texts, autotexts = ax.pie(
+        values,
+        labels=labels,
+        autopct='%1.2f%%',
+        startangle=90,
+        colors=colors,
+        wedgeprops=dict(edgecolor="white", linewidth=2),
+        pctdistance=1.2,
+        labeldistance=1.4
+    )
+    
+    # 尝试设置中文字体
+    for t in texts:
+        t.set_fontsize(11)
+        t.set_family('sans-serif')
+    
+    for at in autotexts:
+        at.set_fontsize(10)
+        at.set_color("black")
+        at.set_fontweight("bold")
+        at.set_family('sans-serif')
+    
+    ax.axis("equal")
+    if title:
+        ax.set_title(title, fontsize=12)
     
     plt.tight_layout()
     return fig
@@ -466,12 +524,13 @@ with tab2:
             show_cols = ["技术名称", "综合成本(万元)", "综合碳排(吨)", "药效保留率", "综合得分"]
             st.dataframe(centered_table(df_result[show_cols]), hide_index=True, use_container_width=True)
             
-            # 成本构成饼图
+            # 成本构成饼图 - 使用英文标签版本确保显示
             if best_costs is not None:
                 st.subheader(f"💰 {best_tech} 年度成本构成（万元）")
                 cost_labels = ["设备折旧", "能耗成本", "碳交易成本"]
                 cost_values = [best_costs["设备折旧(万元)"], best_costs["能耗成本(万元)"], best_costs["碳交易成本(万元)"]]
-                fig = draw_pie_chart(cost_labels, cost_values, "")
+                # 使用英文标签版本
+                fig = draw_pie_chart_english(cost_labels, cost_values, "")
                 st.pyplot(fig)
                 st.success(f"✅ 综合总成本：{round(best_costs['综合成本(万元)'],3)} 万元/年")
 
@@ -553,12 +612,13 @@ with tab4:
 - 技术适用温度：{best_tech_row["适用最低温(℃)"]}-{best_tech_row["适用最高温(℃)"]}℃
 - 控温精度：{best_tech_row["控温精度"]}℃""", icon="✅")
             
-            # 权重分布饼图
+            # 权重分布饼图 - 使用英文标签版本
             st.markdown("### ⚖️ 决策权重分布")
             weight_labels = list(DEFAULT_WEIGHTS.keys())
             weight_values = list(DEFAULT_WEIGHTS.values())
-            fig1 = draw_pie_chart(weight_labels, weight_values, "", colors=["#4B9CD3", "#FFD700", "#FF6B6B"])
+            fig1 = draw_pie_chart_english(weight_labels, weight_values, "", colors=["#4B9CD3", "#FFD700", "#FF6B6B"])
             st.pyplot(fig1)
+            st.caption("注：成本(Cost) | 碳排放(Carbon) | 药效保留(Efficacy)")
         
         with col2:
             st.markdown("### 📍 区域动态适配因子")
@@ -566,14 +626,15 @@ with tab4:
             df_adapt_show = pd.DataFrame(area_row[adapt_cols]).T
             st.dataframe(centered_table(df_adapt_show), hide_index=True, use_container_width=True)
             
-            # 成本构成饼图
+            # 成本构成饼图 - 使用英文标签版本
             if best_costs is not None and not pd.isna(best_costs).all():
                 st.markdown("### 💰 年度成本构成（万元）")
                 cost_labels = ["设备折旧", "能耗成本", "碳交易成本"]
                 cost_values = [best_costs["设备折旧(万元)"], best_costs["能耗成本(万元)"], best_costs["碳交易成本(万元)"]]
-                fig2 = draw_pie_chart(cost_labels, cost_values, "")
+                fig2 = draw_pie_chart_english(cost_labels, cost_values, "")
                 st.pyplot(fig2)
                 st.success(f"✅ 综合总成本：{round(best_costs['综合成本(万元)'],3)} 万元/年")
+                st.caption("注：设备折旧(Depreciation) | 能耗成本(Energy) | 碳交易成本(Carbon Cost)")
         
         # 敏感度分析汇总
         st.markdown("### 📈 全参数敏感度分析汇总")
