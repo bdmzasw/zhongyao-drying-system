@@ -9,7 +9,6 @@ plt.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei', 'Noto Sans CJK SC']
 plt.rcParams['axes.unicode_minus'] = False
 plt.rcParams['figure.facecolor'] = 'white'
 plt.rcParams['font.family'] = 'sans-serif'
-matplotlib.font_manager._rebuild() # 强制刷新字体缓存（解决顽固方框）
 
 # ========== 表格居中 + 全局统一 3 位小数 ==========
 def centered_table(df):
