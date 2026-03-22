@@ -15,188 +15,184 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ========== 中文字体设置 ==========
+# ========== 中文字体设置（强化版） ==========
 def setup_chinese_font():
-    """设置中文字体"""
+    """设置中文字体，确保图表中文正常显示"""
     system = platform.system()
-    chinese_fonts = []
     
+    # 更全面的中文字体列表
+    chinese_fonts = [
+        'SimHei', 'Microsoft YaHei', 'SimSun', 'FangSong', 'KaiTi',
+        'PingFang SC', 'Heiti SC', 'STHeiti', 'Songti SC',
+        'WenQuanYi Zen Hei', 'Noto Sans CJK SC', 'Droid Sans Fallback'
+    ]
+    
+    # 尝试加载系统字体文件
+    font_dirs = []
     if system == 'Windows':
-        chinese_fonts = ['SimHei', 'Microsoft YaHei', 'SimSun']
+        font_dirs = ['C:/Windows/Fonts']
     elif system == 'Darwin':
-        chinese_fonts = ['PingFang SC', 'Heiti SC', 'STHeiti']
+        font_dirs = ['/System/Library/Fonts', '/Library/Fonts']
     else:
-        chinese_fonts = ['WenQuanYi Zen Hei', 'Noto Sans CJK SC']
+        font_dirs = ['/usr/share/fonts/truetype', '/usr/share/fonts/opentype']
+    
+    for font_dir in font_dirs:
+        if os.path.exists(font_dir):
+            for root, dirs, files in os.walk(font_dir):
+                for file in files:
+                    if file.endswith(('.ttf', '.ttc', '.otf')) and ('hei' in file.lower() or 'song' in file.lower() or 'yahei' in file.lower()):
+                        try:
+                            font_path = os.path.join(root, file)
+                            fm.fontManager.addfont(font_path)
+                        except:
+                            pass
     
     matplotlib.rcParams['font.sans-serif'] = chinese_fonts + ['DejaVu Sans']
     matplotlib.rcParams['axes.unicode_minus'] = False
+    matplotlib.rcParams['font.size'] = 10
 
 setup_chinese_font()
 
-# ========== 自定义CSS样式 ==========
+# ========== 自定义CSS样式（侧边栏加深） ==========
 st.markdown("""
 <style>
-    /* 全局背景 - 暖白色 */
+    /* 全局背景 */
     .stApp {
-        background: linear-gradient(135deg, #fef9f0 0%, #faf5e8 100%);
+        background: #f5f2ed;
     }
     
-    /* 主标题区域 */
-    .hero-section {
-        background: linear-gradient(135deg, #eef4e6 0%, #e2ebd6 100%);
-        padding: 1.8rem 2rem;
-        border-radius: 25px;
-        margin-bottom: 2rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-        text-align: center;
-        border: 1px solid rgba(120, 160, 100, 0.2);
-    }
-    
-    .hero-title {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #3a6b3a;
-        margin-bottom: 0.5rem;
-    }
-    
-    .hero-subtitle {
-        font-size: 0.95rem;
-        color: #6b7c6b;
-        margin-bottom: 0;
-    }
-    
-    .hero-badge {
-        background: #d4e2d4;
-        border-radius: 20px;
-        padding: 0.25rem 1rem;
-        display: inline-block;
-        margin-top: 0.8rem;
-        color: #3a6b3a;
-        font-size: 0.8rem;
-    }
-    
-    /* ========== 侧边栏美化 ========== */
+    /* 侧边栏 - 加深背景色，与主区域明显区分 */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #f8f4ec 0%, #f0e8de 100%);
-        border-right: 1px solid #e0d5c8;
+        background: linear-gradient(180deg, #2c4a2e 0%, #1f3a21 100%);
+        border-right: 2px solid #e8dcc8;
     }
     
     [data-testid="stSidebar"] .stMarkdown {
-        color: #4a5b4a;
+        color: #f0f0e8;
+    }
+    
+    [data-testid="stSidebar"] .stSelectbox label,
+    [data-testid="stSidebar"] .stNumberInput label {
+        color: #e8e0c8;
+        font-weight: 500;
     }
     
     [data-testid="stSidebar"] h1, 
     [data-testid="stSidebar"] h2, 
     [data-testid="stSidebar"] h3 {
-        color: #3a6b3a;
+        color: #f5e6b0;
         font-weight: 600;
     }
     
-    /* 侧边栏分隔线 */
-    [data-testid="stSidebar"] hr {
-        margin: 1rem 0;
-        border: none;
-        height: 2px;
-        background: linear-gradient(90deg, #c8d9c8, #e8f0e8, #c8d9c8);
-    }
-    
-    /* 侧边栏选择框样式 */
+    /* 侧边栏选择框 */
     [data-testid="stSidebar"] .stSelectbox > div > div {
-        background-color: white;
-        border: 1px solid #d4e2d4;
-        border-radius: 12px;
+        background-color: #faf7f0;
+        border: 1px solid #6b8c6b;
+        border-radius: 10px;
     }
     
     [data-testid="stSidebar"] .stNumberInput > div > div > input {
-        background-color: white;
-        border: 1px solid #d4e2d4;
-        border-radius: 12px;
+        background-color: #faf7f0;
+        border: 1px solid #6b8c6b;
+        border-radius: 10px;
     }
     
-    /* 侧边栏提示框 */
-    .sidebar-info {
-        background: #e8f0e8;
-        padding: 0.8rem;
+    /* 侧边栏卡片 */
+    .sidebar-card {
+        background: rgba(255, 255, 245, 0.12);
         border-radius: 12px;
-        margin: 0.5rem 0;
-        border-left: 3px solid #6b9c6b;
+        padding: 0.8rem;
+        margin: 0.8rem 0;
+        border-left: 3px solid #e8c87c;
+    }
+    
+    /* 主区域标题 */
+    .hero-section {
+        background: linear-gradient(135deg, #e8e0d0 0%, #ddd0bc 100%);
+        padding: 1.5rem 2rem;
+        border-radius: 20px;
+        margin-bottom: 2rem;
+        text-align: center;
+        border: 1px solid #c8bc9c;
+    }
+    
+    .hero-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #2c4a2e;
+        margin-bottom: 0.5rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 0.9rem;
+        color: #5a5a4a;
+    }
+    
+    .hero-badge {
+        background: #2c4a2e;
+        border-radius: 20px;
+        padding: 0.25rem 1rem;
+        display: inline-block;
+        margin-top: 0.8rem;
+        color: #f5e6b0;
+        font-size: 0.8rem;
     }
     
     /* 卡片样式 */
     .soft-card {
         background: white;
-        border-radius: 20px;
+        border-radius: 16px;
         padding: 1.2rem;
         margin-bottom: 1.2rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-        border: 1px solid #f0e8e0;
-        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e0d4c0;
     }
     
-    .soft-card:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-        border-color: #d4e2d4;
-    }
-    
-    /* 按钮样式 */
+    /* 按钮 */
     .stButton > button {
-        background: linear-gradient(135deg, #6b9c6b 0%, #4a7a4a 100%);
+        background: linear-gradient(135deg, #5a8c5a 0%, #3a6b3a 100%);
         color: white;
         border: none;
-        border-radius: 12px;
-        padding: 0.5rem 1.5rem;
+        border-radius: 10px;
         font-weight: 500;
-        transition: all 0.2s ease;
     }
     
     .stButton > button:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(75, 120, 75, 0.3);
+        background: linear-gradient(135deg, #6b9c6b 0%, #4a7a4a 100%);
+        box-shadow: 0 4px 12px rgba(60, 100, 60, 0.3);
     }
     
-    /* 标签页样式 */
+    /* 标签页 */
     .stTabs [data-baseweb="tab-list"] {
         gap: 0.3rem;
-        background: #f5efe7;
+        background: #e8e0d0;
         padding: 0.4rem;
-        border-radius: 50px;
+        border-radius: 40px;
     }
     
     .stTabs [data-baseweb="tab"] {
-        border-radius: 40px;
+        border-radius: 30px;
         padding: 0.4rem 1.2rem;
-        font-weight: 500;
-        color: #6b7c6b;
+        color: #5a5a4a;
     }
     
     .stTabs [aria-selected="true"] {
-        background: #6b9c6b;
+        background: #5a8c5a;
         color: white;
     }
     
-    /* 表格样式 */
+    /* 表格 */
     .stDataFrame {
         border-radius: 12px;
-    }
-    
-    /* 信息框样式 */
-    .stAlert {
-        border-radius: 12px;
-        border-left-width: 4px;
-    }
-    
-    /* 成功框 */
-    .stAlert[data-baseweb="notification"] {
-        background-color: #e8f5e8;
     }
     
     /* 脚注 */
     .footer {
         text-align: center;
         padding: 1rem;
-        color: #8b9a8b;
-        font-size: 0.8rem;
-        border-top: 1px solid #e8e0d8;
+        color: #8a8a7a;
+        font-size: 0.75rem;
+        border-top: 1px solid #e0d4c0;
         margin-top: 2rem;
     }
 </style>
@@ -204,9 +200,7 @@ st.markdown("""
 
 # ========== 表格格式化函数 ==========
 def centered_table(df):
-    """格式化表格，所有内容居中显示"""
     df_display = df.copy()
-    
     for col in df_display.columns:
         if df_display[col].dtype in ['float64', 'float32']:
             max_val = df_display[col].max()
@@ -227,29 +221,10 @@ def centered_table(df):
         'padding': '8px 6px',
         'font-size': '12px'
     }).set_table_styles([
-        {
-            'selector': 'th',
-            'props': [
-                ('text-align', 'center'),
-                ('font-weight', '600'),
-                ('background-color', '#f0f4ea'),
-                ('padding', '10px 6px'),
-                ('color', '#3a6b3a')
-            ]
-        },
-        {
-            'selector': 'td',
-            'props': [
-                ('text-align', 'center'),
-                ('padding', '6px')
-            ]
-        },
-        {
-            'selector': 'tr:hover',
-            'props': [
-                ('background-color', '#faf8f0')
-            ]
-        }
+        {'selector': 'th', 'props': [('text-align', 'center'), ('font-weight', '600'), 
+                                     ('background-color', '#e8e0d0'), ('color', '#2c4a2e')]},
+        {'selector': 'td', 'props': [('text-align', 'center'), ('padding', '6px')]},
+        {'selector': 'tr:hover', 'props': [('background-color', '#faf5e8')]}
     ])
 
 
@@ -265,10 +240,7 @@ herb_data = {
     "初始含水率%": [60, 75, 65, 70, 80],
     "目标含水率%": [10, 12, 10, 10, 12],
     "每吨除水量kg": [556, 716, 611, 667, 773],
-    "碳足迹系数": [2.6, 3.2, 2.6, 2.9, 3.4],
-    "核心依据": ["黄芪甲苷在60℃以上开始降解", "挥发油在45℃以上损失明显",
-                "党参多糖在60℃以下稳定", "含挥发油，50℃以上损失", "含挥发油和黄酮"],
-    "数据来源": ["《中国药典》2020版", "《中药鉴定学》", "《甘肃省中药材标准》", "《甘肃省中药材标准》", "《浙江省中药炮制规范》"]
+    "碳足迹系数": [2.6, 3.2, 2.6, 2.9, 3.4]
 }
 df_herb = pd.DataFrame(herb_data)
 
@@ -313,15 +285,13 @@ BASE_PARAMS = {"电价": 0.57, "年产量": 800.0, "设备投资": 10.3, "能耗
 
 def parse_herb_temp(temp_str):
     if "≤" in temp_str:
-        min_temp = 0
-        max_temp = int(temp_str.replace("≤", ""))
+        return 0, int(temp_str.replace("≤", ""))
     elif "-" in temp_str:
         parts = temp_str.split("-")
-        min_temp = int(parts[0].strip())
-        max_temp = int(parts[1].strip())
+        return int(parts[0].strip()), int(parts[1].strip())
     else:
-        min_temp = max_temp = int(temp_str)
-    return min_temp, max_temp
+        val = int(temp_str)
+        return val, val
 
 
 def check_temp_match(herb_temp_str, tech_min, tech_max):
@@ -453,36 +423,35 @@ def full_sensitivity_analysis(herb_name, area_name):
 # ========== 饼图绘制函数 ==========
 def draw_pie_chart(labels, values, title="", colors=None):
     label_map = {
-        "成本": "Cost",
-        "碳排放": "Carbon",
-        "药效保留": "Efficacy",
-        "设备折旧": "Depreciation",
-        "能耗成本": "Energy",
-        "碳交易成本": "Carbon Cost"
+        "成本": "成本",
+        "碳排放": "碳排放", 
+        "药效保留": "药效保留",
+        "设备折旧": "设备折旧",
+        "能耗成本": "能耗成本",
+        "碳交易成本": "碳交易成本"
     }
     
-    eng_labels = [label_map.get(label, label) for label in labels]
+    chn_labels = [label_map.get(label, label) for label in labels]
     
     fig, ax = plt.subplots(figsize=(5.5, 4))
     
     if colors is None:
-        colors = ["#6b9c6b", "#d9a56c", "#c97e5a"]
+        colors = ["#6b8c6b", "#d9a56c", "#c97e5a"]
     
     wedges, texts, autotexts = ax.pie(
         values,
-        labels=eng_labels,
+        labels=chn_labels,
         autopct='%1.2f%%',
         startangle=90,
         colors=colors,
         wedgeprops=dict(edgecolor="white", linewidth=1.5),
         pctdistance=1.2,
         labeldistance=1.4,
-        textprops={'fontsize': 10}
+        textprops={'fontsize': 10, 'fontfamily': 'sans-serif'}
     )
     
     for t in texts:
         t.set_fontsize(10)
-    
     for at in autotexts:
         at.set_fontsize(9)
         at.set_color("black")
@@ -496,60 +465,74 @@ def draw_pie_chart(labels, values, title="", colors=None):
     return fig
 
 
+# ========== 绘制敏感度分析图 ==========
+def draw_sensitivity_chart(df_full):
+    """绘制敏感度分析水平条形图"""
+    fig, ax = plt.subplots(figsize=(8, 4))
+    
+    df_plot = df_full.sort_values(by="敏感度系数", key=abs)
+    
+    colors = ['#c97e5a' if x < 0 else '#6b8c6b' for x in df_plot["敏感度系数"]]
+    bars = ax.barh(df_plot["参数"], df_plot["敏感度系数"], color=colors, edgecolor='white', linewidth=1)
+    
+    ax.axvline(x=0, color='#888888', linestyle='--', alpha=0.7, linewidth=1)
+    ax.set_xlabel('敏感度系数', fontsize=11, fontweight='500')
+    ax.set_title('参数敏感度分析', fontsize=12, fontweight='600', pad=12)
+    
+    for bar in bars:
+        width = bar.get_width()
+        offset = 0.03 if width > 0 else -0.03
+        ha = 'left' if width > 0 else 'right'
+        ax.text(width + offset, bar.get_y() + bar.get_height()/2, 
+                f'{width:.3f}', ha=ha, va='center', fontsize=9)
+    
+    ax.set_xlim(min(df_plot["敏感度系数"].min() - 0.1, -0.1), 
+                max(df_plot["敏感度系数"].max() + 0.1, 0.3))
+    ax.grid(axis='x', alpha=0.3, linestyle=':')
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    
+    plt.tight_layout()
+    return fig
+
+
 # ========== 界面 ==========
 # 主标题区域
 st.markdown("""
 <div class="hero-section">
     <div class="hero-title">🌿 中药材低碳干燥智能选型系统</div>
     <div class="hero-subtitle">基于能源经济视角的多目标决策模型</div>
-    <div class="hero-badge">低碳 · 智能 · 经济</div>
+    <div class="hero-badge">⚡ 低碳 · 🎯 智能 · 💰 经济</div>
 </div>
 """, unsafe_allow_html=True)
 
-# 侧边栏
+# 侧边栏（加深背景色）
 with st.sidebar:
-    # 标题带背景色
     st.markdown("""
-    <div style="background: linear-gradient(135deg, #e8f0e8, #d4e2d4); padding: 0.8rem; border-radius: 15px; text-align: center; margin-bottom: 1.5rem;">
-        <span style="font-size: 1.3rem; font-weight: 600; color: #3a6b3a;">⚙️ 参数设置</span>
+    <div style="background: rgba(255,255,240,0.15); border-radius: 15px; padding: 1rem; text-align: center; margin-bottom: 1.5rem;">
+        <span style="font-size: 1.3rem; font-weight: 600; color: #f5e6b0;">⚙️ 参数设置</span>
     </div>
     """, unsafe_allow_html=True)
     
-    # 选择框
-    st.markdown('<div style="margin-bottom: 1rem;">', unsafe_allow_html=True)
     herb_name = st.selectbox("🌱 选择药材", df_herb["药材名称"].tolist(), index=3)
     area_name = st.selectbox("📍 选择区域", df_area["区域名称"].tolist(), index=5)
     annual_output = st.number_input("📦 年产量(吨)", min_value=100, max_value=2000, value=800, step=100)
-    st.markdown('</div>', unsafe_allow_html=True)
     
-    # 数据来源卡片
-    st.markdown("""
-    <div style="background: #eef4e6; border-radius: 15px; padding: 1rem; margin: 1rem 0;">
-        <span style="font-weight: 600; color: #3a6b3a;">📚 数据来源</span>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("---")
+    
+    st.markdown('<div class="sidebar-card">📚 <strong>数据来源</strong></div>', unsafe_allow_html=True)
     st.caption("《中国药典2025版》")
     st.caption("各省气象/发改委数据")
     st.caption("CNKI核心期刊")
     st.caption("全国碳排放权交易市场")
     
-    # 系统特点卡片
-    st.markdown("""
-    <div style="background: #f5efe7; border-radius: 15px; padding: 1rem; margin: 1rem 0;">
-        <span style="font-weight: 600; color: #3a6b3a;">🎯 系统特点</span>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-card">🎯 <strong>系统特点</strong></div>', unsafe_allow_html=True)
     st.caption("✅ 多目标优化决策")
     st.caption("✅ 生命周期碳排放评估")
     st.caption("✅ 区域动态适配因子")
     st.caption("✅ 敏感性分析")
     
-    # 使用提示卡片
-    st.markdown("""
-    <div style="background: #e8f0e8; border-radius: 15px; padding: 1rem; margin: 1rem 0; border-left: 4px solid #6b9c6b;">
-        <span style="font-weight: 600; color: #3a6b3a;">💡 使用提示</span>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-card">💡 <strong>使用提示</strong></div>', unsafe_allow_html=True)
     st.caption("1️⃣ 选择药材和区域")
     st.caption("2️⃣ 调整权重偏好")
     st.caption("3️⃣ 点击开始选型")
@@ -568,9 +551,9 @@ with tab1:
         st.markdown('</div>', unsafe_allow_html=True)
         
         st.markdown('<div class="soft-card">', unsafe_allow_html=True)
-        st.subheader("⚙️ 默认AHP决策权重")
+        st.subheader("⚙️ 默认决策权重")
         df_weights = pd.DataFrame(DEFAULT_WEIGHTS.items(), columns=["指标", "权重"])
-        df_weights["权重占比(%)"] = round(df_weights["权重"] * 100, 1)
+        df_weights["占比(%)"] = round(df_weights["权重"] * 100, 1)
         st.dataframe(centered_table(df_weights), hide_index=True, use_container_width=True)
         st.success("✅ 一致性检验 CR=0.033 < 0.1")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -662,24 +645,14 @@ with tab3:
                     st.dataframe(centered_table(df_full), hide_index=True, use_container_width=True)
                     
                     if not df_full.empty:
-                        st.subheader("敏感度系数龙卷风图")
-                        df_plot = df_full.sort_values(by="敏感度系数", key=abs)
-                        fig, ax = plt.subplots(figsize=(7, 3.5))
-                        bars = ax.barh(df_plot["参数"], df_plot["敏感度系数"], 
-                                      color=["#c97e5a" if x<0 else "#6b9c6b" for x in df_plot["敏感度系数"]])
-                        ax.axvline(x=0, color="gray", linestyle="--", alpha=0.5)
-                        ax.set_xlabel("敏感度系数")
-                        ax.set_title("参数敏感度分析")
-                        for bar in bars:
-                            width = bar.get_width()
-                            ax.text(width + (0.03 if width>0 else -0.03), 
-                                   bar.get_y() + bar.get_height()/2, f"{width:.3f}", fontsize=9)
+                        st.subheader("📊 参数敏感度分析图")
+                        fig = draw_sensitivity_chart(df_full)
                         st.pyplot(fig)
                 else:
                     df_sensi = sensitivity_analysis(herb_name, area_name, sensi_param)
                     st.subheader(f"{sensi_param} 波动影响")
                     st.dataframe(centered_table(df_sensi), hide_index=True, use_container_width=True)
-                    st.line_chart(df_sensi, x="波动比例(%)", y="综合成本(万元)", color="#6b9c6b")
+                    st.line_chart(df_sensi, x="波动比例(%)", y="综合成本(万元)", color="#6b8c6b")
                     
                     df_calc = df_sensi[pd.to_numeric(df_sensi["波动比例(%)"])!=0]
                     if not df_calc.empty:
@@ -715,7 +688,7 @@ with tab4:
             st.success(f"✅ 药材要求：{herb_row['建议干燥温度']}℃\n✅ 技术适用：{best_tech_row['适用最低温(℃)']}-{best_tech_row['适用最高温(℃)']}℃\n✅ 控温精度：{best_tech_row['控温精度']}℃")
             
             st.markdown("### ⚖️ 权重分布")
-            fig1 = draw_pie_chart(list(DEFAULT_WEIGHTS.keys()), list(DEFAULT_WEIGHTS.values()), "", colors=["#6b9c6b", "#d9a56c", "#c97e5a"])
+            fig1 = draw_pie_chart(list(DEFAULT_WEIGHTS.keys()), list(DEFAULT_WEIGHTS.values()), "", colors=["#6b8c6b", "#d9a56c", "#c97e5a"])
             st.pyplot(fig1)
         
         with col2:
@@ -732,7 +705,7 @@ with tab4:
                 st.pyplot(fig2)
                 st.success(f"总成本：{round(best_costs['综合成本(万元)'],3)} 万元/年")
         
-        st.markdown("### 📈 敏感度分析")
+        st.markdown("### 📈 敏感度分析汇总")
         df_sensi_dash = full_sensitivity_analysis(herb_name, area_name)
         if not df_sensi_dash.empty:
             st.dataframe(centered_table(df_sensi_dash), hide_index=True, use_container_width=True)
@@ -742,6 +715,6 @@ with tab4:
 # 脚注
 st.markdown("""
 <div class="footer">
-    📚 基于《中药材低碳干燥智能选型研究》开发 | CR=0.033 | © 2025
+    📚 基于《中药材低碳干燥智能选型研究》开发 | 一致性检验 CR=0.033 | © 2025
 </div>
 """, unsafe_allow_html=True)
