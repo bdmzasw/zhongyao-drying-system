@@ -3,16 +3,17 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
+import os
 
-# ========== 终极根治中文方框 + 清缓存 ==========
-plt.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei', 'Noto Sans CJK SC']
-plt.rcParams['axes.unicode_minus'] = False
-plt.rcParams['figure.facecolor'] = 'white'
-plt.rcParams['font.family'] = 'sans-serif'
+# ========== 自动安装中文字体 + 永久解决方框（Streamlit专用） ==========
+os.system('apt-get update && apt-get install -y fonts-wqy-zenhei')
+matplotlib.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei']
+matplotlib.rcParams['axes.unicode_minus'] = False
+matplotlib.rcParams['figure.facecolor'] = 'white'
 
-# ========== 表格居中 + 全局统一 3 位小数 ==========
+# ========== 表格：居中 + 3位小数（清爽无长零） ==========
 def centered_table(df):
-    df = df.round(3) # 全局强制 3 位小数
+    df = df.round(3)
     return df.style.set_properties(**{
         'text-align': 'center',
         'vertical-align': 'middle',
@@ -24,7 +25,7 @@ def centered_table(df):
 
 st.set_page_config(page_title="中药材低碳干燥智能选型系统", page_icon="🌿")
 
-# ========== 基础数据 ==========
+# ========== 原始完整基础数据 ==========
 herb_data = {
     "药材ID": ["H001", "H002", "H003", "H004", "H005"],
     "药材名称": ["黄芪", "金银花", "党参", "当归", "菊花"],
@@ -39,7 +40,7 @@ herb_data = {
     "碳足迹系数(kgCO2/kg)": [2.6, 3.2, 2.6, 2.9, 3.4],
     "核心依据": ["黄芪甲苷在60℃以上开始降解", "挥发油在45℃以上损失明显",
                 "党参多糖在60℃以下稳定", "含挥发油，50℃以上损失", "含挥发油和黄酮"],
-    "数据来源": ["《中国药典》2020版一部", "康廷国《中药鉴定学》第五版",
+    "数据来源": ["《中国药典2020版一部》", "康廷国《中药鉴定学》第五版",
                 "《甘肃省中药材标准》+王玉《食品科学》", "《甘肃省中药材标准》", "《浙江省中药炮制规范》"]
 }
 df_herb = pd.DataFrame(herb_data)
@@ -102,7 +103,7 @@ DEFAULT_WEIGHTS = {"成本": 0.260, "碳排放": 0.106, "药效保留": 0.633}
 BASE_PARAMS = {"电价": 0.570, "年产量": 800.000, "设备投资": 10.300, "能耗系数": 1.650, "碳交易价格": 76.240}
 FLUCTUATIONS = [-0.2, -0.1, 0, 0.1, 0.2]
 
-# ========== 函数 ==========
+# ========== 计算函数 ==========
 def parse_herb_temp(temp_str):
     if "≤" in temp_str:
         min_temp = 0
@@ -128,7 +129,7 @@ def calc_total_cost(tech_row, area_row, herb_tons_water, annual_output=800):
     energy_cost = round((annual_output * herb_tons_water * energy_coeff * elec_price) / 10000, 3)
     carbon_price = area_row["碳交易价格（元）"]
     carbon_cost = round((tech_row["年均全周期碳（吨）"] * area_row["综合修正因子"] * carbon_price) / 10000, 3)
-    total_cost = round(depre_cost + energy_cost + carbon_cost, 3)
+    total_cost = round(dpre_cost + energy_cost + carbon_cost, 3)
     return total_cost, depre_cost, energy_cost, carbon_cost
 
 def normalize_series(s):
@@ -207,7 +208,7 @@ def sensitivity_analysis(herb_name, area_name, base_param, fluct_ratios=[-0.2,-0
             elif base_param == "碳交易价格":
                 ar = area_row.copy()
                 ar["碳交易价格（元）"] = val
-                cost,_,_,_ = calc_total_cost(tech_row, ar, herb_tons_water)
+                cost,_,_,_ = calc_total_cost(tech_row, area_row, herb_tons_water)
             chg = round((cost-base_cost)/base_cost*100,3) if base_cost !=0 else 0
             data.append({"分析参数":base_param,"波动比例(%)":f"{fr*100:.0f}","参数值":val,"综合成本(万元)":round(cost,3),"成本变化率(%)":chg})
         return pd.DataFrame(data)
@@ -230,7 +231,7 @@ def full_sensitivity_analysis(herb_name, area_name):
         res.append({"参数":p,"基准值":round(BASE_PARAMS[p],3),"敏感度系数":coe,"敏感程度":lv})
     return pd.DataFrame(res)
 
-# ========== 界面 ==========
+# ========== 完整四页界面 ==========
 st.title("中药材低碳干燥智能选型系统")
 st.caption("——基于能源经济视角的多目标决策模型")
 
@@ -302,7 +303,7 @@ with tab2:
                 wedges, texts, autotexts = ax.pie(
                     cost_df["金额"],
                     labels=cost_df["成本类型"],
-                    autopct='%1.3f%%',
+                    autopct='%1.2f%%',
                     startangle=90,
                     colors=["#95E1D3","#FCE38A","#FF8A80"],
                     wedgeprops=dict(edgecolor="white", linewidth=2),
@@ -393,7 +394,7 @@ with tab4:
             ax1.pie(
                 df_weight_plot["权重"],
                 labels=df_weight_plot["指标"],
-                autopct='%1.3f%%',
+                autopct='%1.2f%%',
                 startangle=90,
                 colors=["#4B9CD3","#FFD700","#FF6B6B"],
                 wedgeprops=dict(edgecolor="white", linewidth=2),
@@ -419,7 +420,7 @@ with tab4:
                 wedges2, texts2, autotexts2 = ax2.pie(
                     cost_df["金额"],
                     labels=cost_df["成本类型"],
-                    autopct='%1.3f%%',
+                    autopct='%1.2f%%',
                     startangle=90,
                     colors=["#95E1D3","#FCE38A","#FF8A80"],
                     wedgeprops=dict(edgecolor="white", linewidth=2),
@@ -446,7 +447,4 @@ with tab4:
 
 st.markdown("---")
 st.caption("📚 本系统基于《中药材低碳干燥智能选型研究——基于能源经济视角的多目标决策模型》开发 | 一致性检验CR=0.033<0.1")
-
-
-
 
