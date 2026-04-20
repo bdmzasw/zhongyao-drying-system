@@ -1,8 +1,11 @@
+import matplotlib
 import matplotlib.pyplot as plt
 
-plt.rcParams['font.sans-serif'] = ['SimHei']  # 黑体
-plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
-plt.rcParams['font.family'] = 'sans-serif'
+# ✅ 线上环境永久修复中文乱码（必须放最顶部）
+plt.rcParams['axes.unicode_minus'] = False
+matplotlib.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei', 'SimHei', 'DejaVu Sans']
+matplotlib.rcParams['axes.unicode_minus'] = False
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
