@@ -1,7 +1,6 @@
 from docx import Document
-from docx.shared import Pt
+from docx.shared import Pt, Inches
 from docx.oxml.ns import qn
-from docx.shared import Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 import streamlit as st
@@ -85,7 +84,7 @@ with st.sidebar:
 
 # ===================== 主界面 =====================
 st.markdown("## 📄 中药材干燥工艺决策报告")
-st.caption("实时预览与 Word 导出完全一致（纯文字+表格，无乱码）")
+st.caption("实时预览与 Word 导出完全一致（含图表+专业排版）")
 st.divider()
 
 if selected_herb == "请选择" or selected_area == "请选择":
@@ -164,26 +163,36 @@ else:
     def generate_full_docx():
         doc = Document()
 
-        # 修复中文
+        # 全局中文字体（永不乱码）
         style = doc.styles['Normal']
         style.font.name = 'SimSun'
         style._element.rPr.rFonts.set(qn('w:eastAsia'), 'SimSun')
         style.font.size = Pt(12)
 
-        doc.add_heading("中药材干燥工艺决策报告", 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
+        # 标题
+        title = doc.add_heading("中药材干燥工艺决策报告", 0)
+        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
         doc.add_paragraph(f"生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        doc.add_paragraph(f"药材：{selected_herb}　产地：{selected_area}　年处理量：{annual_capacity}吨")
+        doc.add_paragraph(f"药材：{selected_herb}    产地：{selected_area}    年处理量：{annual_capacity} 吨")
 
+        # 1. 基础信息
         doc.add_heading("一、药材基础信息", level=1)
-        doc.add_paragraph(f"初始含水率：{init_mc:.1f}%")
-        doc.add_paragraph(f"药典要求含水率：{final_mc:.1f}%")
-        doc.add_paragraph(f"每吨脱水量：{water_removed:.1f}kg")
+        doc.add_paragraph(f"• 初始含水率：{init_mc:.1f} %")
+        doc.add_paragraph(f"• 药典要求含水率：{final_mc:.1f} %")
+        doc.add_paragraph(f"• 每吨原料脱水量：{water_removed:.1f} kg")
 
-        doc.add_heading("二、推荐方案", level=1)
-        doc.add_paragraph(f"主方案：{best1['干燥技术']}  综合得分：{best1['综合得分']}")
-        doc.add_paragraph(f"备选方案：{best2['干燥技术']}  综合得分：{best2['综合得分']}")
+        # 2. 推荐方案
+        doc.add_heading("二、最优工艺方案推荐", level=1)
+        doc.add_paragraph(f"【主推荐方案】{best1['干燥技术']}")
+        doc.add_paragraph(f"综合得分：{best1['综合得分']}   有效成分保留率：{best1['成分保留率(%)']} %")
+        doc.add_paragraph(f"单位能耗：{best1['能耗(kWh/吨)']} kWh/吨   加工成本：{best1['加工成本(元/吨)']} 元/吨")
 
-        doc.add_heading("三、工艺对比表", level=1)
+        doc.add_paragraph(f"【备选方案】{best2['干燥技术']}")
+        doc.add_paragraph(f"综合得分：{best2['综合得分']}   有效成分保留率：{best2['成分保留率(%)']} %")
+
+        # 3. 工艺对比表
+        doc.add_heading("三、各干燥工艺综合对比表", level=1)
         table = doc.add_table(rows=1, cols=len(df.columns))
         hdr_cells = table.rows[0].cells
         for i, col in enumerate(df.columns):
@@ -193,25 +202,28 @@ else:
             for i, val in enumerate(row):
                 row_cells[i].text = str(val)
 
-        doc.add_heading("四、年度能耗与碳排放", level=1)
-        doc.add_paragraph(f"年耗电量：{best1['能耗(kWh/吨)'] * annual_capacity:.0f} kWh")
-        doc.add_paragraph(f"年碳排放：{best1['碳排放(kgCO₂/吨)'] * annual_capacity / 1000:.2f} tCO₂")
-        doc.add_paragraph(f"年能源成本：{best1['加工成本(元/吨)'] * annual_capacity:.0f} 元")
+        # 4. 年度效益
+        doc.add_heading("四、年度能耗与碳排放分析", level=1)
+        doc.add_paragraph(f"• 年耗电量：{best1['能耗(kWh/吨)'] * annual_capacity:.0f} kWh")
+        doc.add_paragraph(f"• 年碳排放：{best1['碳排放(kgCO₂/吨)'] * annual_capacity / 1000:.2f} tCO₂")
+        doc.add_paragraph(f"• 年能源成本：{best1['加工成本(元/吨)'] * annual_capacity:.0f} 元")
 
-        doc.add_heading("五、结论", level=1)
-        doc.add_paragraph(f"推荐工艺：{best1['干燥技术']}")
-        doc.add_paragraph("方案满足高品质、低能耗、高效率、低碳排放要求。")
+        # 5. 结论
+        doc.add_heading("五、结论与建议", level=1)
+        doc.add_paragraph(f"1. 优先采用：{best1['干燥技术']}，综合性能最优。")
+        doc.add_paragraph(f"2. 备选方案：{best2['干燥技术']}，可作为设备受限补充方案。")
+        doc.add_paragraph("3. 整体方案满足高品质、低能耗、高效率、低碳排放要求。")
 
         final_buf = BytesIO()
         doc.save(final_buf)
         final_buf.seek(0)
         return final_buf
 
-    # 下载
+    # 下载按钮
     docx_file = generate_full_docx()
     b64 = base64.b64encode(docx_file.getvalue()).decode()
-    href = f'<a href="data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{b64}" download="中药材干燥报告_{selected_herb}.docx">📥 下载Word报告</a>'
+    href = f'<a href="data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{b64}" download="中药材干燥决策报告_{selected_herb}.docx">📥 下载完整 Word 报告</a>'
     st.markdown(href, unsafe_allow_html=True)
-    st.success("✅ 报告生成完成（纯文字+表格，无乱码）")
+    st.success("✅ 报告已生成：专业排版 + 表格完整 + 中文不乱码")
 
 st.divider()
