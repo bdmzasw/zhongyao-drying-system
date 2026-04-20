@@ -1,7 +1,7 @@
 from docx import Document
 from docx.shared import Pt
 from docx.oxml.ns import qn
-from docx.enum.text import WD_ALIGN_PAR
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 import streamlit as st
 import pandas as pd
@@ -93,7 +93,7 @@ else:
     herb_info = herbs_df[herbs_df["药材标准名称(药典名)"] == selected_herb].iloc[0]
     region_info = regions_df[regions_df["产区名称"] == selected_area].iloc[0]
     init_mc = safe_float(herb_info["鲜品初始含水率(%)"])
-    final_mc = safe_float(herb_info["药典成品含水率(%)"])
+    final_mc = safe_float(herb_info["药典规定成品含水率(%)"])
     water_removed = 1000 * (init_mc - final_mc) / (100 - final_mc)
 
     # 计算所有工艺
@@ -174,7 +174,7 @@ else:
         style._element.rPr.rFonts.set(qn('w:eastAsia'), 'SimSun')
         style.font.size = Pt(12)
 
-        doc.add_heading("中药材干燥工艺决策报告", 0).alignment = WD_ALIGN.PARAGRAPH_CENTER
+        doc.add_heading("中药材干燥工艺决策报告", 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
         doc.add_paragraph(f"生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         doc.add_paragraph(f"药材：{selected_herb}　产地：{selected_area}　年处理量：{annual_capacity}吨")
 
