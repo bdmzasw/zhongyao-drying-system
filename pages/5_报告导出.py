@@ -1,15 +1,18 @@
-from docx import Document
-from docx.shared import Pt, Inches
-from docx.oxml.ns import qn
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-
 import streamlit as st
 import pandas as pd
 import sys
 import os
 from datetime import datetime
+from docx import Document
+from docx.shared import Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 import base64
 from io import BytesIO
+import matplotlib.pyplot as plt
+
+# 仅用于 Word 导出图片，不影响界面显示
+plt.rcParams["font.family"] = ["DejaVu Sans"]
+plt.rcParams["axes.unicode_minus"] = False
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -92,6 +95,7 @@ if selected_herb == "请选择" or selected_area == "请选择":
 else:
     herb_info = herbs_df[herbs_df["药材标准名称(药典名)"] == selected_herb].iloc[0]
     region_info = regions_df[regions_df["产区名称"] == selected_area].iloc[0]
+    province = region_info["所辖主要省市"].split("、")[0]
     init_mc = safe_float(herb_info["鲜品初始含水率(%)"])
     final_mc = safe_float(herb_info["药典规定成品含水率(%)"])
     water_removed = 1000 * (init_mc - final_mc) / (100 - final_mc)
@@ -117,7 +121,41 @@ else:
     best1 = df.iloc[0]
     best2 = df.iloc[1]
 
-    # ===================== 报告预览：改用 Streamlit 原生图表（和能耗页面一样，不乱码） =====================
+    # ===================== 生成用于导出的图片（英文标签，不乱码） =====================
+    tech_map = {
+        "热风干燥": "Hot Air",
+        "真空干燥": "Vacuum",
+        "热泵干燥": "Heat Pump",
+        "微波干燥": "Microwave",
+        "远红外干燥": "Far-IR",
+        "热风-远红外联合干燥": "Hybrid",
+        "组合式低温干燥": "Low-Temp"
+    }
+    df_export = df.copy()
+    df_export["工艺"] = df_export["干燥技术"].map(tech_map)
+
+    # 图1：成分保留率
+    fig1, ax1 = plt.subplots(figsize=(6, 3.5))
+    ax1.barh(df_export["工艺"], df_export["成分保留率(%)"], color="#4a9f75")
+    ax1.set_xlabel("Retention Rate (%)")
+    ax1.set_title("Retention Rate Comparison")
+    plt.tight_layout()
+    buf1 = BytesIO()
+    fig1.savefig(buf1, dpi=150, format="png")
+    buf1.seek(0)
+
+    # 图2：综合得分
+    fig2, ax2 = plt.subplots(figsize=(6, 3.5))
+    ax2.bar(df_export["工艺"], df_export["综合得分"], color="#3b82f6")
+    ax2.set_ylabel("Score")
+    ax2.set_title("Comprehensive Score Comparison")
+    plt.xticks(rotation=20, ha="right")
+    plt.tight_layout()
+    buf2 = BytesIO()
+    fig2.savefig(buf2, dpi=150, format="png")
+    buf2.seek(0)
+
+    # ===================== 报告预览（原生中文图表，不乱码） =====================
     with st.expander("📄 报告实时预览", expanded=True):
         st.markdown(f"# 中药材干燥工艺决策报告")
         st.markdown(f"**生成时间**：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -147,9 +185,9 @@ else:
         st.markdown("## 三、工艺对比图表")
         col1, col2 = st.columns(2)
         with col1:
-            st.bar_chart(df, x="干燥技术", y="成分保留率(%)", height=350, color="#4a9f75")
+            st.bar_chart(df, x="干燥技术", y="成分保留率(%)", height=350)
         with col2:
-            st.bar_chart(df, x="干燥技术", y="综合得分", height=350, color="#3b82f6")
+            st.bar_chart(df, x="干燥技术", y="综合得分", height=350)
 
         st.divider()
         st.markdown("## 四、年度能耗与碳排放")
@@ -163,14 +201,9 @@ else:
         st.write(f"2. 设备受限时可选：{best2['干燥技术']}")
         st.write("3. 工艺兼顾品质、能耗、效率与低碳要求。")
 
-    # ===================== Word 导出（只保留文字表格，不导出乱码的matplotlib图片） =====================
+    # ===================== Word 导出（含图片） =====================
     def generate_full_docx():
         doc = Document()
-        style = doc.styles['Normal']
-        style.font.name = 'SimSun'
-        style._element.rPr.rFonts.set(qn('w:eastAsia'), 'SimSun')
-        style.font.size = Pt(12)
-
         doc.add_heading("中药材干燥工艺决策报告", 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
         doc.add_paragraph(f"生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         doc.add_paragraph(f"药材：{selected_herb}　|　产地：{selected_area}　|　年处理量：{annual_capacity}吨")
@@ -189,14 +222,12 @@ else:
         doc.add_paragraph(f"工艺：{best2['干燥技术']}  得分：{best2['综合得分']}")
         doc.add_paragraph(f"保留率：{best2['成分保留率(%)']}%  能耗：{best2['能耗(kWh/吨)']}kWh/吨")
 
-        doc.add_heading("三、工艺对比表", level=1)
-        table = doc.add_table(rows=1, cols=len(df.columns))
-        for i, col in enumerate(df.columns):
-            table.rows[0].cells[i].text = col
-        for _, row in df.iterrows():
-            row_cells = table.add_row().cells
-            for i, v in enumerate(row):
-                row_cells[i].text = str(v)
+        doc.add_heading("三、工艺对比图表", level=1)
+        doc.add_picture(buf1, width=Inches(5.0))
+        doc.add_paragraph("图1 成分保留率对比").alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        doc.add_picture(buf2, width=Inches(5.0))
+        doc.add_paragraph("图2 综合得分对比").alignment = WD_ALIGN_PARAGRAPH.CENTER
 
         doc.add_heading("四、年度能耗与碳排放", level=1)
         doc.add_paragraph(f"年耗电量：{best1['能耗(kWh/吨)'] * annual_capacity:.0f} kWh")
@@ -216,8 +247,8 @@ else:
     # 下载按钮
     docx_file = generate_full_docx()
     b64 = base64.b64encode(docx_file.getvalue()).decode()
-    href = f'<a href="data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{b64}" download="中药材干燥报告_{selected_herb}.docx">📥 下载完整Word报告（含文字+对比表）</a>'
+    href = f'<a href="data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{b64}" download="中药材干燥报告_{selected_herb}.docx">📥 下载完整Word报告（含图表）</a>'
     st.markdown(href, unsafe_allow_html=True)
-    st.success("✅ 预览图表（Streamlit原生）与Word报告均无乱码")
+    st.success("✅ 预览与导出完全一致，图表无乱码")
 
 st.divider()
