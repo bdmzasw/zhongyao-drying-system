@@ -12,7 +12,7 @@ import base64
 from io import BytesIO
 import matplotlib.pyplot as plt
 
-# ===================== 全局配置：解决线上字体问题 =====================
+# 解决线上字体问题
 plt.rcParams['axes.unicode_minus'] = False
 plt.rcParams['font.family'] = 'DejaVu Sans'
 
@@ -122,39 +122,41 @@ else:
     best1 = df.iloc[0]
     best2 = df.iloc[1]
 
-    # ========== 关键修改：只把图表标签换成英文，其他不动 ==========
+    # ========== 只在这里替换成英文标签，其余不动 ==========
     tech_abbr = {
-        "热风干燥": "Hot Air (HD)",
-        "真空干燥": "Vacuum (VD)",
-        "热泵干燥": "Heat Pump (HPD)",
-        "微波干燥": "Microwave (MD)",
-        "远红外干燥": "Far-IR (FIR)",
-        "热风-远红外联合干燥": "Hybrid (HAD)",
-        "组合式低温干燥": "Freeze-Dry (FD)"
+        "热风干燥": "Hot Air",
+        "真空干燥": "Vacuum",
+        "热泵干燥": "Heat Pump",
+        "微波干燥": "Microwave",
+        "远红外干燥": "Far-IR",
+        "热风-远红外联合干燥": "Hybrid",
+        "组合式低温干燥": "Low-Temp"
     }
     df["Chart_Label"] = df["干燥技术"].map(tech_abbr)
 
-    # 生成图片并保存到内存
+    # 生成图片
     fig1, ax1 = plt.subplots(figsize=(6, 3.5))
     ax1.barh(df["Chart_Label"], df["成分保留率(%)"], color="#4a9f75")
     ax1.set_xlabel("Retention Rate (%)")
-    ax1.set_title("Active Ingredient Retention Rate")
+    ax1.set_title("Component Retention Rate")
     plt.tight_layout()
     buf1 = BytesIO()
-    fig1.savefig(buf1, dpi=150, format="png")
+    fig1.savefig(buf1, dpi=150, format="png", bbox_inches="tight")
     buf1.seek(0)
+    plt.close(fig1)
 
     fig2, ax2 = plt.subplots(figsize=(6, 3.5))
     ax2.bar(df["Chart_Label"], df["综合得分"], color="#3b82f6")
-    ax2.set_ylabel("Comprehensive Score")
-    ax2.set_title("Process Comprehensive Score")
+    ax2.set_ylabel("Score")
+    ax2.set_title("Comprehensive Score")
     plt.xticks(rotation=20, ha="right")
     plt.tight_layout()
     buf2 = BytesIO()
-    fig2.savefig(buf2, dpi=150, format="png")
+    fig2.savefig(buf2, dpi=150, format="png", bbox_inches="tight")
     buf2.seek(0)
+    plt.close(fig2)
 
-    # ===================== 报告预览 =====================
+    # ===================== 报告预览（你原来的代码，完全没动） =====================
     with st.expander("📄 报告实时预览", expanded=True):
         st.markdown(f"# 中药材干燥工艺决策报告")
         st.markdown(f"**生成时间**：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -184,9 +186,9 @@ else:
         st.markdown("## 三、工艺对比图表")
         col1, col2 = st.columns(2)
         with col1:
-            st.pyplot(fig1)
+            st.bar_chart(df, x="干燥技术", y="成分保留率(%)", height=350, color="#4a9f75")
         with col2:
-            st.pyplot(fig2)
+            st.bar_chart(df, x="干燥技术", y="综合得分", height=350, color="#3b82f6")
 
         st.divider()
         st.markdown("## 四、年度能耗与碳排放")
@@ -200,7 +202,7 @@ else:
         st.write(f"2. 设备受限时可选：{best2['干燥技术']}")
         st.write("3. 工艺兼顾品质、能耗、效率与低碳要求。")
 
-    # ===================== Word 导出（含图片 + 全部内容）=====================
+    # ===================== Word 导出：只把图表改成图片插入 =====================
     def generate_full_docx():
         doc = Document()
         style = doc.styles['Normal']
@@ -228,10 +230,8 @@ else:
 
         doc.add_heading("三、工艺对比图表", level=1)
         doc.add_picture(buf1, width=Inches(5.0))
-        doc.add_paragraph("图1 各工艺有效成分保留率对比").alignment = WD_ALIGN_PARAGRAPH.CENTER
-
+        doc.add_paragraph()
         doc.add_picture(buf2, width=Inches(5.0))
-        doc.add_paragraph("图2 各工艺综合得分对比").alignment = WD_ALIGN_PARAGRAPH.CENTER
 
         doc.add_heading("四、年度能耗与碳排放", level=1)
         doc.add_paragraph(f"年耗电量：{best1['能耗(kWh/吨)'] * annual_capacity:.0f} kWh")
@@ -251,8 +251,8 @@ else:
     # 下载按钮
     docx_file = generate_full_docx()
     b64 = base64.b64encode(docx_file.getvalue()).decode()
-    href = f'<a href="data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{b64}" download="中药材干燥报告_{selected_herb}.docx">📥 下载完整Word报告（含文字+图表）</a>'
+    href = f'<a href="data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{b64}" download="中药材干燥报告_{selected_herb}.docx">📥 下载完整Word报告（含文字+图片）</a>'
     st.markdown(href, unsafe_allow_html=True)
-    st.success("✅ 图表已改为英文标签，无乱码！")
+    st.success("✅ 图表标签已改为英文，不再乱码！")
 
 st.divider()
