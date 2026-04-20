@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 import sys
 import os
 
@@ -103,20 +104,25 @@ st.divider()
 st.subheader("📊 可视化分析")
 
 if plot_type == "活化能对比":
-    st.bar_chart(
+    fig = px.bar(
         df_filter,
         x="药材名称",
         y="干燥活化能(kJ/mol)",
         color="干燥技术",
-        height=400
+        barmode="group",
+        title="干燥活化能对比（越低越节能）"
     )
+    st.plotly_chart(fig, use_container_width=True)
+
 else:
-    st.bar_chart(
+    fig = px.bar(
         df_filter,
         x="药材名称",
         y="有效水分扩散系数(m2/s)",
         color="干燥技术",
-        height=400
+        barmode="group",
+        title="水分扩散系数对比（越高越快）"
     )
+    st.plotly_chart(fig, use_container_width=True)
 
 st.success("✅ 加载完成 — 筛选正常 | 图表正常 | 无错误")
