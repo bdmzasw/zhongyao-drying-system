@@ -1,25 +1,23 @@
 from docx import Document
 from docx.shared import Pt
 from docx.oxml.ns import qn
+from docx.shared import Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-# 创建文档时，指定中文字体
-doc = Document()
-doc.styles['Normal'].font.name = '宋体'
-doc.styles['Normal']._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
 import streamlit as st
 import pandas as pd
 import sys
 import os
 from datetime import datetime
-from docx import Document
-from docx.shared import Inches
-from docx.enum.text import WD_ALIGN_PARAGRAPH
 import base64
 from io import BytesIO
+import matplotlib
 import matplotlib.pyplot as plt
 
-plt.rcParams["font.sans-serif"] = ["SimHei", "Microsoft YaHei"]
-plt.rcParams["axes.unicode_minus"] = False
+# ========== 全局修复中文乱码（线上永久生效） ==========
+plt.rcParams['axes.unicode_minus'] = False
+matplotlib.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei', 'SimHei', 'DejaVu Sans']
+matplotlib.rcParams['axes.unicode_minus'] = False
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -197,6 +195,13 @@ else:
     # ===================== Word 导出（含图片 + 全部内容）=====================
     def generate_full_docx():
         doc = Document()
+
+        # ========== 修复 Word 中文乱码（核心代码）==========
+        style = doc.styles['Normal']
+        style.font.name = 'SimSun'
+        style._element.rPr.rFonts.set(qn('w:eastAsia'), 'SimSun')
+        style.font.size = Pt(12)
+
         doc.add_heading("中药材干燥工艺决策报告", 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
         doc.add_paragraph(f"生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         doc.add_paragraph(f"药材：{selected_herb}　|　产地：{selected_area}　|　年处理量：{annual_capacity}吨")
