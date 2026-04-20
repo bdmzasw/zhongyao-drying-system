@@ -12,9 +12,9 @@ import base64
 from io import BytesIO
 import matplotlib.pyplot as plt
 
-# 导出图表用（不影响界面）
-plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
+# ===================== 全局配置：解决线上字体问题 =====================
 plt.rcParams['axes.unicode_minus'] = False
+plt.rcParams['font.family'] = 'DejaVu Sans'
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -62,8 +62,8 @@ techs_df = data["techs"]
 st.set_page_config(page_title="报告导出", page_icon="📄", layout="wide")
 st.markdown("""
 <style>
-    [data-testid="stSidebarNav"] {display: none;}
-    .stApp { background-color: #f5f9f5; }
+[data-testid="stSidebarNav"] {display: none;}
+.stApp { background-color: #f5f9f5; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -74,34 +74,16 @@ if st.button("🏠 返回主页"):
 with st.sidebar:
     st.subheader("⚙️ 总操作仪表盘")
     herb_list = ["请选择"] + herbs_df["药材标准名称(药典名)"].dropna().unique().tolist()
-    selected_herb = st.selectbox(
-        "🌿 药材品种", herb_list,
-        index=herb_list.index(st.session_state.get("selected_herb", "请选择")) 
-        if st.session_state.get("selected_herb") in herb_list else 0
-    )
-
+    selected_herb = st.selectbox("🌿 药材品种", herb_list, index=herb_list.index(st.session_state.get("selected_herb", "请选择")) if st.session_state.get("selected_herb") in herb_list else 0)
     region_list = ["请选择"] + regions_df["产区名称"].dropna().unique().tolist()
-    selected_area = st.selectbox(
-        "📍 产区", region_list,
-        index=region_list.index(st.session_state.get("selected_area", "请选择")) 
-        if st.session_state.get("selected_area") in region_list else 0
-    )
-
-    electricity_price = st.number_input(
-        "⚡ 电价（元/kWh）",
-        value=st.session_state.get("electricity_price", 0.6), step=0.01
-    )
-
-    annual_capacity = st.number_input(
-        "📦 年处理量（吨/年）",
-        value=st.session_state.get("annual_capacity", 400), step=50
-    )
+    selected_area = st.selectbox("📍 产区", region_list, index=region_list.index(st.session_state.get("selected_area", "请选择")) if st.session_state.get("selected_area") in region_list else 0)
+    electricity_price = st.number_input("⚡ 电价（元/kWh）", value=st.session_state.get("electricity_price", 0.6), step=0.01)
+    annual_capacity = st.number_input("📦 年处理量（吨/年）", value=st.session_state.get("annual_capacity", 400), step=50)
 
     st.session_state["selected_herb"] = selected_herb
     st.session_state["selected_area"] = selected_area
     st.session_state["electricity_price"] = electricity_price
     st.session_state["annual_capacity"] = annual_capacity
-
     st.markdown("---")
     st.caption("✅ 全系统同步生效")
 
@@ -112,7 +94,6 @@ st.divider()
 
 if selected_herb == "请选择" or selected_area == "请选择":
     st.warning("⚠️ 请先选择药材与产区再生成报告")
-
 else:
     herb_info = herbs_df[herbs_df["药材标准名称(药典名)"] == selected_herb].iloc[0]
     region_info = regions_df[regions_df["产区名称"] == selected_area].iloc[0]
@@ -141,29 +122,39 @@ else:
     best1 = df.iloc[0]
     best2 = df.iloc[1]
 
-    # ===================== 生成导出用图表（和预览完全一样） =====================
-    fig1, ax1 = plt.subplots(figsize=(7, 4))
-    ax1.barh(df["干燥技术"], df["成分保留率(%)"], color="#4a9f75")
-    ax1.set_xlabel("成分保留率 (%)")
-    ax1.set_title("各干燥工艺有效成分保留率对比")
+    # ========== 关键修改：只把图表标签换成英文，其他不动 ==========
+    tech_abbr = {
+        "热风干燥": "Hot Air (HD)",
+        "真空干燥": "Vacuum (VD)",
+        "热泵干燥": "Heat Pump (HPD)",
+        "微波干燥": "Microwave (MD)",
+        "远红外干燥": "Far-IR (FIR)",
+        "热风-远红外联合干燥": "Hybrid (HAD)",
+        "组合式低温干燥": "Freeze-Dry (FD)"
+    }
+    df["Chart_Label"] = df["干燥技术"].map(tech_abbr)
+
+    # 生成图片并保存到内存
+    fig1, ax1 = plt.subplots(figsize=(6, 3.5))
+    ax1.barh(df["Chart_Label"], df["成分保留率(%)"], color="#4a9f75")
+    ax1.set_xlabel("Retention Rate (%)")
+    ax1.set_title("Active Ingredient Retention Rate")
     plt.tight_layout()
     buf1 = BytesIO()
-    fig1.savefig(buf1, dpi=150, bbox_inches='tight', format='png')
+    fig1.savefig(buf1, dpi=150, format="png")
     buf1.seek(0)
-    plt.close()
 
-    fig2, ax2 = plt.subplots(figsize=(7, 4))
-    ax2.bar(df["干燥技术"], df["综合得分"], color="#3b82f6")
-    ax2.set_ylabel("综合得分")
-    ax2.set_title("各工艺综合得分对比")
-    plt.xticks(rotation=30, ha='right')
+    fig2, ax2 = plt.subplots(figsize=(6, 3.5))
+    ax2.bar(df["Chart_Label"], df["综合得分"], color="#3b82f6")
+    ax2.set_ylabel("Comprehensive Score")
+    ax2.set_title("Process Comprehensive Score")
+    plt.xticks(rotation=20, ha="right")
     plt.tight_layout()
     buf2 = BytesIO()
-    fig2.savefig(buf2, dpi=150, bbox_inches='tight', format='png')
+    fig2.savefig(buf2, dpi=150, format="png")
     buf2.seek(0)
-    plt.close()
 
-    # ===================== 报告预览（你原来的代码，完全没动） =====================
+    # ===================== 报告预览 =====================
     with st.expander("📄 报告实时预览", expanded=True):
         st.markdown(f"# 中药材干燥工艺决策报告")
         st.markdown(f"**生成时间**：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -193,9 +184,9 @@ else:
         st.markdown("## 三、工艺对比图表")
         col1, col2 = st.columns(2)
         with col1:
-            st.bar_chart(df, x="干燥技术", y="成分保留率(%)", height=350, color="#4a9f75")
+            st.pyplot(fig1)
         with col2:
-            st.bar_chart(df, x="干燥技术", y="综合得分", height=350, color="#3b82f6")
+            st.pyplot(fig2)
 
         st.divider()
         st.markdown("## 四、年度能耗与碳排放")
@@ -209,7 +200,7 @@ else:
         st.write(f"2. 设备受限时可选：{best2['干燥技术']}")
         st.write("3. 工艺兼顾品质、能耗、效率与低碳要求。")
 
-    # ===================== Word 导出：和预览 100% 一模一样 =====================
+    # ===================== Word 导出（含图片 + 全部内容）=====================
     def generate_full_docx():
         doc = Document()
         style = doc.styles['Normal']
@@ -236,9 +227,11 @@ else:
         doc.add_paragraph(f"保留率：{best2['成分保留率(%)']}%  能耗：{best2['能耗(kWh/吨)']}kWh/吨")
 
         doc.add_heading("三、工艺对比图表", level=1)
-        doc.add_picture(buf1, width=Inches(5.5))
-        doc.add_paragraph()
-        doc.add_picture(buf2, width=Inches(5.5))
+        doc.add_picture(buf1, width=Inches(5.0))
+        doc.add_paragraph("图1 各工艺有效成分保留率对比").alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        doc.add_picture(buf2, width=Inches(5.0))
+        doc.add_paragraph("图2 各工艺综合得分对比").alignment = WD_ALIGN_PARAGRAPH.CENTER
 
         doc.add_heading("四、年度能耗与碳排放", level=1)
         doc.add_paragraph(f"年耗电量：{best1['能耗(kWh/吨)'] * annual_capacity:.0f} kWh")
@@ -255,11 +248,11 @@ else:
         final_buf.seek(0)
         return final_buf
 
-    # 下载
+    # 下载按钮
     docx_file = generate_full_docx()
     b64 = base64.b64encode(docx_file.getvalue()).decode()
-    href = f'<a href="data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{b64}" download="中药材干燥报告_{selected_herb}.docx">📥 下载完整Word报告（和预览完全一致）</a>'
+    href = f'<a href="data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{b64}" download="中药材干燥报告_{selected_herb}.docx">📥 下载完整Word报告（含文字+图表）</a>'
     st.markdown(href, unsafe_allow_html=True)
-    st.success("✅ 预览内容 1:1 导出到 Word 完成！")
+    st.success("✅ 图表已改为英文标签，无乱码！")
 
 st.divider()
