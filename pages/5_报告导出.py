@@ -134,7 +134,7 @@ else:
     }
     df["Chart_Label"] = df["干燥技术"].map(tech_abbr)
 
-    # 生成图片（预览用，导出不用，不删除不改动）
+    # 生成图片（预览用，导出不用）
     fig1, ax1 = plt.subplots(figsize=(6, 3.5))
     ax1.barh(df["Chart_Label"], df["成分保留率(%)"], color="#4a9f75")
     ax1.set_xlabel("Retention Rate (%)")
@@ -156,7 +156,7 @@ else:
     buf2.seek(0)
     plt.close(fig2)
 
-    # ===================== 报告预览（你原来的代码，完全没动） =====================
+    # ===================== 报告预览（完全没动） =====================
     with st.expander("📄 报告实时预览", expanded=True):
         st.markdown(f"# 中药材干燥工艺决策报告")
         st.markdown(f"**生成时间**：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -202,48 +202,67 @@ else:
         st.write(f"2. 设备受限时可选：{best2['干燥技术']}")
         st.write("3. 工艺兼顾品质、能耗、效率与低碳要求。")
 
-    # ===================== Word 导出：删除图表，替换为细致不冗杂的文字描述 =====================
+    # ===================== Word 导出：无图表 + 美化排版 + 纯文字 =====================
     def generate_full_docx():
         doc = Document()
+
+        # 基础样式
         style = doc.styles['Normal']
         style.font.name = 'SimSun'
         style._element.rPr.rFonts.set(qn('w:eastAsia'), 'SimSun')
         style.font.size = Pt(12)
 
-        doc.add_heading("中药材干燥工艺决策报告", 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
+        # 主标题
+        title = doc.add_heading("中药材干燥工艺决策报告", 0)
+        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
         doc.add_paragraph(f"生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        doc.add_paragraph(f"药材：{selected_herb}　|　产地：{selected_area}　|　年处理量：{annual_capacity}吨")
+        doc.add_paragraph(f"药材：{selected_herb}　｜　产地：{selected_area}　｜　年处理量：{annual_capacity} 吨")
+        doc.add_paragraph("")
 
+        # 一、药材基础信息
         doc.add_heading("一、药材基础信息", level=1)
-        doc.add_paragraph(f"初始含水率：{init_mc:.1f}%")
-        doc.add_paragraph(f"药典要求含水率：{final_mc:.1f}%")
-        doc.add_paragraph(f"每吨脱水量：{water_removed:.1f}kg")
+        doc.add_paragraph(f"• 初始含水率：{init_mc:.1f}%")
+        doc.add_paragraph(f"• 药典要求含水率：{final_mc:.1f}%")
+        doc.add_paragraph(f"• 每吨药材脱水量：{water_removed:.1f} kg")
+        doc.add_paragraph("")
 
-        doc.add_heading("二、双方案推荐", level=1)
-        doc.add_heading("主方案", level=2)
-        doc.add_paragraph(f"工艺：{best1['干燥技术']}  得分：{best1['综合得分']}")
-        doc.add_paragraph(f"保留率：{best1['成分保留率(%)']}%  能耗：{best1['能耗(kWh/吨)']}kWh/吨")
+        # 二、双方案推荐
+        doc.add_heading("二、推荐工艺方案", level=1)
+
+        doc.add_heading("主方案（综合最优）", level=2)
+        doc.add_paragraph(f"工艺：{best1['干燥技术']}")
+        doc.add_paragraph(f"综合得分：{best1['综合得分']}")
+        doc.add_paragraph(f"有效成分保留率：{best1['成分保留率(%)']}%")
+        doc.add_paragraph(f"单位能耗：{best1['能耗(kWh/吨)']} kWh/吨")
+        doc.add_paragraph("")
 
         doc.add_heading("备选方案", level=2)
-        doc.add_paragraph(f"工艺：{best2['干燥技术']}  得分：{best2['综合得分']}")
-        doc.add_paragraph(f"保留率：{best2['成分保留率(%)']}%  能耗：{best2['能耗(kWh/吨)']}kWh/吨")
+        doc.add_paragraph(f"工艺：{best2['干燥技术']}")
+        doc.add_paragraph(f"综合得分：{best2['综合得分']}")
+        doc.add_paragraph(f"有效成分保留率：{best2['成分保留率(%)']}%")
+        doc.add_paragraph(f"单位能耗：{best2['能耗(kWh/吨)']} kWh/吨")
+        doc.add_paragraph("")
 
+        # 三、工艺对比（纯文字，无图表）
         doc.add_heading("三、工艺对比说明", level=1)
-        # 文字描述：细致、不冗杂，覆盖核心对比维度，贴合图表逻辑
-        doc.add_paragraph(f"本次共对比7种干燥工艺，按综合得分从高到低排序依次为：{', '.join(df['干燥技术'].tolist())}。")
-        doc.add_paragraph(f"成分保留率方面，最优为{df.loc[df['成分保留率(%)'].idxmax(), '干燥技术']}（{df['成分保留率(%)'].max()}%），最差为{df.loc[df['成分保留率(%)'].idxmin(), '干燥技术']}（{df['成分保留率(%)'].min()}%），差值为{df['成分保留率(%)'].max() - df['成分保留率(%)'].min()}个百分点。")
-        doc.add_paragraph(f"综合得分核心差异集中在能耗与成分保留率，主方案{best1['干燥技术']}凭借较高的成分保留率（{best1['成分保留率(%)']}%）和较低的能耗（{best1['能耗(kWh/吨)']}kWh/吨），综合表现最优；备选方案{best2['干燥技术']}综合得分略低，但其干燥时间（{best2['干燥时间(h)']}h）更具优势，可作为设备受限情况下的替代选择。")
-        doc.add_paragraph(f"能耗与加工成本呈正相关，{df.loc[df['能耗(kWh/吨)'].idxmin(), '干燥技术']}能耗最低（{df['能耗(kWh/吨)'].min()}kWh/吨），对应加工成本也最低（{df.loc[df['能耗(kWh/吨)'].idxmin(), '加工成本(元/吨)']}元/吨）；碳排放与能耗直接关联，能耗最低工艺的碳排放也最低（{df.loc[df['能耗(kWh/吨)'].idxmin(), '碳排放(kgCO₂/吨)']}kgCO₂/吨）。")
+        doc.add_paragraph(f"1. 综合排序：按综合得分从高到低依次为 {', '.join(df['干燥技术'].tolist())}。")
+        doc.add_paragraph(f"2. 成分保留率：最高为 {df['成分保留率(%)'].max()}%，最低为 {df['成分保留率(%)'].min()}%，差异主要由干燥温度与时长决定。")
+        doc.add_paragraph(f"3. 能耗与成本：能耗越低，加工成本与碳排放量相应越低，整体呈线性相关。")
+        doc.add_paragraph(f"4. 适用场景：主方案综合性能更优；备选方案在干燥效率上更具优势，适合产能紧张场景。")
+        doc.add_paragraph("")
 
+        # 四、年度能耗与碳排放
         doc.add_heading("四、年度能耗与碳排放", level=1)
-        doc.add_paragraph(f"年耗电量：{best1['能耗(kWh/吨)'] * annual_capacity:.0f} kWh")
-        doc.add_paragraph(f"年碳排放：{best1['碳排放(kgCO₂/吨)'] * annual_capacity / 1000:.2f} tCO₂")
-        doc.add_paragraph(f"年能源成本：{best1['加工成本(元/吨)'] * annual_capacity:.0f} 元")
+        doc.add_paragraph(f"• 年耗电量：{best1['能耗(kWh/吨)'] * annual_capacity:.0f} kWh")
+        doc.add_paragraph(f"• 年碳排放量：{best1['碳排放(kgCO₂/吨)'] * annual_capacity / 1000:.2f} tCO₂")
+        doc.add_paragraph(f"• 年加工能源成本：{best1['加工成本(元/吨)'] * annual_capacity:.0f} 元")
+        doc.add_paragraph("")
 
+        # 五、结论与建议
         doc.add_heading("五、结论与建议", level=1)
-        doc.add_paragraph(f"优先选用：{best1['干燥技术']}")
-        doc.add_paragraph(f"备选方案：{best2['干燥技术']}")
-        doc.add_paragraph("本方案可实现品质、能耗、效率、低碳协同优化。")
+        doc.add_paragraph(f"• 优先选用工艺：{best1['干燥技术']}")
+        doc.add_paragraph(f"• 备选备用工艺：{best2['干燥技术']}")
 
         final_buf = BytesIO()
         doc.save(final_buf)
@@ -253,8 +272,7 @@ else:
     # 下载按钮
     docx_file = generate_full_docx()
     b64 = base64.b64encode(docx_file.getvalue()).decode()
-    href = f'<a href="data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{b64}" download="中药材干燥报告_{selected_herb}.docx">📥 下载完整Word报告（纯文字描述）</a>'
+    href = f'<a href="data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{b64}" download="中药材干燥报告_{selected_herb}.docx">📥 下载完整Word报告</a>'
     st.markdown(href, unsafe_allow_html=True)
-    st.success("✅ 导出已删除图表，替换为细致不冗杂的文字描述！")
 
 st.divider()
