@@ -10,6 +10,7 @@ import base64
 from io import BytesIO
 import matplotlib.pyplot as plt
 
+# ===================== 【只改这里！照着能耗页面写法修复中文】 =====================
 plt.rcParams["font.sans-serif"] = ["SimHei", "Microsoft YaHei"]
 plt.rcParams["axes.unicode_minus"] = False
 
