@@ -1,20 +1,17 @@
-from docx import Document
-from docx.shared import Pt, Inches
-from docx.oxml.ns import qn
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-
 import streamlit as st
 import pandas as pd
 import sys
 import os
 from datetime import datetime
+from docx import Document
+from docx.shared import Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 import base64
 from io import BytesIO
 import matplotlib.pyplot as plt
 
-# ===================== 只解决图表字体 =====================
-plt.rcParams['axes.unicode_minus'] = False
-plt.rcParams['font.family'] = 'DejaVu Sans'
+plt.rcParams["font.sans-serif"] = ["SimHei", "Microsoft YaHei"]
+plt.rcParams["axes.unicode_minus"] = False
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -97,6 +94,7 @@ if selected_herb == "请选择" or selected_area == "请选择":
 else:
     herb_info = herbs_df[herbs_df["药材标准名称(药典名)"] == selected_herb].iloc[0]
     region_info = regions_df[regions_df["产区名称"] == selected_area].iloc[0]
+    province = region_info["所辖主要省市"].split("、")[0]
     init_mc = safe_float(herb_info["鲜品初始含水率(%)"])
     final_mc = safe_float(herb_info["药典规定成品含水率(%)"])
     water_removed = 1000 * (init_mc - final_mc) / (100 - final_mc)
@@ -122,39 +120,27 @@ else:
     best1 = df.iloc[0]
     best2 = df.iloc[1]
 
-    # ===================== 只在这里改英文：图表标签 =====================
-    tech_abbr = {
-        "热风干燥": "Hot Air",
-        "真空干燥": "Vacuum",
-        "热泵干燥": "Heat Pump",
-        "微波干燥": "Microwave",
-        "远红外干燥": "Far-IR",
-        "热风-远红外联合干燥": "Hybrid",
-        "组合式低温干燥": "Low-Temp"
-    }
-    df["Chart_Label"] = df["干燥技术"].map(tech_abbr)
-
-    # 生成图片（图表内部全英文，不乱码）
+    # 生成图片并保存到内存
     fig1, ax1 = plt.subplots(figsize=(6, 3.5))
-    ax1.barh(df["Chart_Label"], df["成分保留率(%)"], color="#4a9f75")
-    ax1.set_xlabel("Retention Rate (%)")
-    ax1.set_title("Retention Rate Comparison")
+    ax1.barh(df["干燥技术"], df["成分保留率(%)"], color="#4a9f75")
+    ax1.set_xlabel("成分保留率 (%)")
+    ax1.set_title("各干燥工艺有效成分保留率对比")
     plt.tight_layout()
     buf1 = BytesIO()
     fig1.savefig(buf1, dpi=150, format="png")
     buf1.seek(0)
 
     fig2, ax2 = plt.subplots(figsize=(6, 3.5))
-    ax2.bar(df["Chart_Label"], df["综合得分"], color="#3b82f6")
-    ax2.set_ylabel("Score")
-    ax2.set_title("Comprehensive Score Comparison")
+    ax2.bar(df["干燥技术"], df["综合得分"], color="#3b82f6")
+    ax2.set_ylabel("综合得分")
+    ax2.set_title("各工艺综合得分对比")
     plt.xticks(rotation=20, ha="right")
     plt.tight_layout()
     buf2 = BytesIO()
     fig2.savefig(buf2, dpi=150, format="png")
     buf2.seek(0)
 
-    # ===================== 报告预览（全部中文不变） =====================
+    # ===================== 报告预览 =====================
     with st.expander("📄 报告实时预览", expanded=True):
         st.markdown(f"# 中药材干燥工艺决策报告")
         st.markdown(f"**生成时间**：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -200,14 +186,9 @@ else:
         st.write(f"2. 设备受限时可选：{best2['干燥技术']}")
         st.write("3. 工艺兼顾品质、能耗、效率与低碳要求。")
 
-    # ===================== Word 导出（中文不变，只图表英文） =====================
+    # ===================== Word 导出（含图片 + 全部内容）=====================
     def generate_full_docx():
         doc = Document()
-        style = doc.styles['Normal']
-        style.font.name = 'SimSun'
-        style._element.rPr.rFonts.set(qn('w:eastAsia'), 'SimSun')
-        style.font.size = Pt(12)
-
         doc.add_heading("中药材干燥工艺决策报告", 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
         doc.add_paragraph(f"生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         doc.add_paragraph(f"药材：{selected_herb}　|　产地：{selected_area}　|　年处理量：{annual_capacity}吨")
