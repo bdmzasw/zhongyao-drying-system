@@ -11,13 +11,6 @@ import os
 from datetime import datetime
 import base64
 from io import BytesIO
-import matplotlib
-import matplotlib.pyplot as plt
-
-# ========== 全局修复中文乱码（线上永久生效） ==========
-plt.rcParams['axes.unicode_minus'] = False
-matplotlib.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei', 'SimHei', 'DejaVu Sans']
-matplotlib.rcParams['axes.unicode_minus'] = False
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -92,7 +85,7 @@ with st.sidebar:
 
 # ===================== 主界面 =====================
 st.markdown("## 📄 中药材干燥工艺决策报告")
-st.caption("实时预览与 Word 导出完全一致（含文字 + 图表 + 双方案）")
+st.caption("实时预览与 Word 导出完全一致（纯文字+表格，无乱码）")
 st.divider()
 
 if selected_herb == "请选择" or selected_area == "请选择":
@@ -100,7 +93,6 @@ if selected_herb == "请选择" or selected_area == "请选择":
 else:
     herb_info = herbs_df[herbs_df["药材标准名称(药典名)"] == selected_herb].iloc[0]
     region_info = regions_df[regions_df["产区名称"] == selected_area].iloc[0]
-    province = region_info["所辖主要省市"].split("、")[0]
     init_mc = safe_float(herb_info["鲜品初始含水率(%)"])
     final_mc = safe_float(herb_info["药典规定成品含水率(%)"])
     water_removed = 1000 * (init_mc - final_mc) / (100 - final_mc)
@@ -125,26 +117,6 @@ else:
     df = df.sort_values("综合得分", ascending=False)
     best1 = df.iloc[0]
     best2 = df.iloc[1]
-
-    # 生成图片并保存到内存
-    fig1, ax1 = plt.subplots(figsize=(6, 3.5))
-    ax1.barh(df["干燥技术"], df["成分保留率(%)"], color="#4a9f75")
-    ax1.set_xlabel("成分保留率 (%)")
-    ax1.set_title("各干燥工艺有效成分保留率对比")
-    plt.tight_layout()
-    buf1 = BytesIO()
-    fig1.savefig(buf1, dpi=150, format="png")
-    buf1.seek(0)
-
-    fig2, ax2 = plt.subplots(figsize=(6, 3.5))
-    ax2.bar(df["干燥技术"], df["综合得分"], color="#3b82f6")
-    ax2.set_ylabel("综合得分")
-    ax2.set_title("各工艺综合得分对比")
-    plt.xticks(rotation=20, ha="right")
-    plt.tight_layout()
-    buf2 = BytesIO()
-    fig2.savefig(buf2, dpi=150, format="png")
-    buf2.seek(0)
 
     # ===================== 报告预览 =====================
     with st.expander("📄 报告实时预览", expanded=True):
@@ -173,12 +145,8 @@ else:
             st.write(f"保留率：{best2['成分保留率(%)']}%")
 
         st.divider()
-        st.markdown("## 三、工艺对比图表")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.pyplot(fig1)
-        with col2:
-            st.pyplot(fig2)
+        st.markdown("## 三、工艺对比表")
+        st.dataframe(df, use_container_width=True)
 
         st.divider()
         st.markdown("## 四、年度能耗与碳排放")
@@ -192,11 +160,11 @@ else:
         st.write(f"2. 设备受限时可选：{best2['干燥技术']}")
         st.write("3. 工艺兼顾品质、能耗、效率与低碳要求。")
 
-    # ===================== Word 导出（含图片 + 全部内容）=====================
+    # ===================== Word 导出 =====================
     def generate_full_docx():
         doc = Document()
 
-        # ========== 修复 Word 中文乱码（核心代码）==========
+        # 修复中文
         style = doc.styles['Normal']
         style.font.name = 'SimSun'
         style._element.rPr.rFonts.set(qn('w:eastAsia'), 'SimSun')
@@ -204,49 +172,46 @@ else:
 
         doc.add_heading("中药材干燥工艺决策报告", 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
         doc.add_paragraph(f"生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        doc.add_paragraph(f"药材：{selected_herb}　|　产地：{selected_area}　|　年处理量：{annual_capacity}吨")
+        doc.add_paragraph(f"药材：{selected_herb}　产地：{selected_area}　年处理量：{annual_capacity}吨")
 
         doc.add_heading("一、药材基础信息", level=1)
         doc.add_paragraph(f"初始含水率：{init_mc:.1f}%")
         doc.add_paragraph(f"药典要求含水率：{final_mc:.1f}%")
         doc.add_paragraph(f"每吨脱水量：{water_removed:.1f}kg")
 
-        doc.add_heading("二、双方案推荐", level=1)
-        doc.add_heading("主方案", level=2)
-        doc.add_paragraph(f"工艺：{best1['干燥技术']}  得分：{best1['综合得分']}")
-        doc.add_paragraph(f"保留率：{best1['成分保留率(%)']}%  能耗：{best1['能耗(kWh/吨)']}kWh/吨")
+        doc.add_heading("二、推荐方案", level=1)
+        doc.add_paragraph(f"主方案：{best1['干燥技术']}  综合得分：{best1['综合得分']}")
+        doc.add_paragraph(f"备选方案：{best2['干燥技术']}  综合得分：{best2['综合得分']}")
 
-        doc.add_heading("备选方案", level=2)
-        doc.add_paragraph(f"工艺：{best2['干燥技术']}  得分：{best2['综合得分']}")
-        doc.add_paragraph(f"保留率：{best2['成分保留率(%)']}%  能耗：{best2['能耗(kWh/吨)']}kWh/吨")
-
-        doc.add_heading("三、工艺对比图表", level=1)
-        doc.add_picture(buf1, width=Inches(5.0))
-        doc.add_paragraph("图1 各工艺有效成分保留率对比").alignment = WD_ALIGN_PARAGRAPH.CENTER
-
-        doc.add_picture(buf2, width=Inches(5.0))
-        doc.add_paragraph("图2 各工艺综合得分对比").alignment = WD_ALIGN_PARAGRAPH.CENTER
+        doc.add_heading("三、工艺对比表", level=1)
+        table = doc.add_table(rows=1, cols=len(df.columns))
+        hdr_cells = table.rows[0].cells
+        for i, col in enumerate(df.columns):
+            hdr_cells[i].text = col
+        for _, row in df.iterrows():
+            row_cells = table.add_row().cells
+            for i, val in enumerate(row):
+                row_cells[i].text = str(val)
 
         doc.add_heading("四、年度能耗与碳排放", level=1)
         doc.add_paragraph(f"年耗电量：{best1['能耗(kWh/吨)'] * annual_capacity:.0f} kWh")
         doc.add_paragraph(f"年碳排放：{best1['碳排放(kgCO₂/吨)'] * annual_capacity / 1000:.2f} tCO₂")
         doc.add_paragraph(f"年能源成本：{best1['加工成本(元/吨)'] * annual_capacity:.0f} 元")
 
-        doc.add_heading("五、结论与建议", level=1)
-        doc.add_paragraph(f"优先选用：{best1['干燥技术']}")
-        doc.add_paragraph(f"备选方案：{best2['干燥技术']}")
-        doc.add_paragraph("本方案可实现品质、能耗、效率、低碳协同优化。")
+        doc.add_heading("五、结论", level=1)
+        doc.add_paragraph(f"推荐工艺：{best1['干燥技术']}")
+        doc.add_paragraph("方案满足高品质、低能耗、高效率、低碳排放要求。")
 
         final_buf = BytesIO()
         doc.save(final_buf)
         final_buf.seek(0)
         return final_buf
 
-    # 下载按钮
+    # 下载
     docx_file = generate_full_docx()
     b64 = base64.b64encode(docx_file.getvalue()).decode()
-    href = f'<a href="data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{b64}" download="中药材干燥报告_{selected_herb}.docx">📥 下载完整Word报告（含文字+图表）</a>'
+    href = f'<a href="data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{b64}" download="中药材干燥报告_{selected_herb}.docx">📥 下载Word报告</a>'
     st.markdown(href, unsafe_allow_html=True)
-    st.success("✅ Word 报告已包含：全文 + 两张图表 + 双方案")
+    st.success("✅ 报告生成完成（纯文字+表格，无乱码）")
 
 st.divider()
