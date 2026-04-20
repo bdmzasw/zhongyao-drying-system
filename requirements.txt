@@ -7,3 +7,4 @@ scipy
 openpyxl
 python-dotenv
 reportlab
+python-docx
