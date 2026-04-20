@@ -1,3 +1,11 @@
+from docx import Document
+from docx.shared import Pt
+from docx.oxml.ns import qn
+
+# 创建文档时，指定中文字体
+doc = Document()
+doc.styles['Normal'].font.name = '宋体'
+doc.styles['Normal']._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
 import streamlit as st
 import pandas as pd
 import sys
