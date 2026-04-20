@@ -10,12 +10,13 @@ import os
 from datetime import datetime
 import base64
 from io import BytesIO
-import matplotlib
 import matplotlib.pyplot as plt
 
-# ========== 全局修复matplotlib：线上不乱码 ==========
-matplotlib.rcParams['axes.unicode_minus'] = False
-matplotlib.rcParams['font.family'] = 'DejaVu Sans'
+# ===================== 全局配置：强制解决线上字体问题 =====================
+# 1. Streamlit 页面显示：用中文（本地和线上都能渲染）
+# 2. Matplotlib 图表：用英文标签 + 不依赖中文字体，彻底解决方框问题
+plt.rcParams['axes.unicode_minus'] = False
+plt.rcParams['font.family'] = 'DejaVu Sans' # 强制使用通用字体，避免中文渲染失败
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -90,7 +91,7 @@ with st.sidebar:
 
 # ===================== 主界面 =====================
 st.markdown("## 📄 中药材干燥工艺决策报告")
-st.caption("实时预览与 Word 导出图表完全一致（专业matplotlib图表，无乱码）")
+st.caption("实时预览与 Word 导出完全一致（含文字 + 图表 + 双方案）")
 st.divider()
 
 if selected_herb == "请选择" or selected_area == "请选择":
@@ -123,32 +124,35 @@ else:
     best1 = df.iloc[0]
     best2 = df.iloc[1]
 
-    # ========== 工艺名称缩写映射（解决标签乱码） ==========
-    tech_abbr = {
-        "热风干燥": "HD",
-        "真空干燥": "VD",
-        "热泵干燥": "HPD",
-        "微波干燥": "MD",
-        "远红外干燥": "FIR",
-        "热风-远红外联合干燥": "HAD",
-        "组合式低温干燥": "FD"
+    # ========== 关键修改：工艺名称缩写映射（解决线上字体报错） ==========
+    # 用英文缩写代替中文长名称，matplotlib 不会因为字体找不到而变成方框
+    tech_mapping = {
+        "热风干燥": "Hot Air (HD)",
+        "真空干燥": "Vacuum (VD)",
+        "热泵干燥": "Heat Pump (HPD)",
+        "微波干燥": "Microwave (MD)",
+        "远红外干燥": "Far-IR (FIR)",
+        "热风-远红外联合干燥": "Hybrid (HAD)",
+        "组合式低温干燥": "Freeze-Dry (FD)"
     }
-    df["工艺缩写"] = df["干燥技术"].map(tech_abbr)
+    df["工艺标签"] = df["干燥技术"].map(tech_mapping)
 
-    # ========== 生成图表（预览和导出用的是同一张） ==========
+    # 生成图片并保存到内存
     fig1, ax1 = plt.subplots(figsize=(6, 3.5))
-    ax1.barh(df["工艺缩写"], df["成分保留率(%)"], color="#4a9f75")
-    ax1.set_xlabel("Retention Rate (%)")
-    ax1.set_title("Active Ingredient Retention Rate")
+    # 注意：这里用 df["工艺标签"] 也就是英文缩写
+    ax1.barh(df["工艺标签"], df["成分保留率(%)"], color="#4a9f75")
+    ax1.set_xlabel("Retention Rate (%)") # 坐标轴也用英文
+    ax1.set_title("Active Ingredient Retention Rate Comparison")
     plt.tight_layout()
     buf1 = BytesIO()
     fig1.savefig(buf1, dpi=150, format="png")
     buf1.seek(0)
 
     fig2, ax2 = plt.subplots(figsize=(6, 3.5))
-    ax2.bar(df["工艺缩写"], df["综合得分"], color="#3b82f6")
-    ax2.set_ylabel("Comprehensive Score")
-    ax2.set_title("Process Comprehensive Score")
+    # 注意：这里用 df["工艺标签"] 也就是英文缩写
+    ax2.bar(df["工艺标签"], df["综合得分"], color="#3b82f6")
+    ax2.set_ylabel("Comprehensive Score") # 坐标轴也用英文
+    ax2.set_title("Process Comprehensive Score Comparison")
     plt.xticks(rotation=20, ha="right")
     plt.tight_layout()
     buf2 = BytesIO()
@@ -201,10 +205,10 @@ else:
         st.write(f"2. 设备受限时可选：{best2['干燥技术']}")
         st.write("3. 工艺兼顾品质、能耗、效率与低碳要求。")
 
-    # ===================== Word 导出（和预览图表完全一致）=====================
+    # ===================== Word 导出（含图片 + 全部内容）=====================
     def generate_full_docx():
         doc = Document()
-        # 修复Word文本中文乱码
+        # Word 文档内的中文正常显示设置
         style = doc.styles['Normal']
         style.font.name = 'SimSun'
         style._element.rPr.rFonts.set(qn('w:eastAsia'), 'SimSun')
@@ -255,6 +259,6 @@ else:
     b64 = base64.b64encode(docx_file.getvalue()).decode()
     href = f'<a href="data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{b64}" download="中药材干燥报告_{selected_herb}.docx">📥 下载完整Word报告（含文字+图表）</a>'
     st.markdown(href, unsafe_allow_html=True)
-    st.success("✅ 报告已生成：预览与导出图表完全一致，无乱码")
+    st.success("✅ Word 报告已包含：全文 + 两张图表 + 双方案")
 
 st.divider()
