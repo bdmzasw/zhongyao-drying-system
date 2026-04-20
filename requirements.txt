@@ -1,5 +1,9 @@
 streamlit
-matplotlib
 pandas
+matplotlib
+plotly
 numpy
-seaborn
+scipy
+openpyxl
+python-dotenv
+reportlab
