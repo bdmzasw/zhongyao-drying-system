@@ -51,10 +51,16 @@ st.markdown("""
 .stApp {background-color: #f5f9f5;}
 .block-container {padding-top:1rem; padding-bottom:1rem;}
 div[data-testid="stVerticalBlock"] {gap:0.5rem;}
+/* 修复返回主页按钮被遮挡 */
+.stButton {
+    margin-bottom: 10px;
+}
 </style>
 """, unsafe_allow_html=True)
 
-if st.button("🏠 返回主页"):
+# 顶部返回主页按钮（修复位置）
+st.button("🏠 返回主页", key="home_btn")
+if st.session_state.get("home_btn"):
     st.switch_page("Home.py")
 
 # ===================== 全局侧边栏 =====================
