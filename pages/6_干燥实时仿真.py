@@ -49,18 +49,20 @@ st.markdown("""
 <style>
 [data-testid="stSidebarNav"] {display: none;}
 .stApp {background-color: #f5f9f5;}
-.block-container {padding-top:1rem; padding-bottom:1rem;}
+.block-container {padding-top: 3rem; padding-bottom:1rem;}
 div[data-testid="stVerticalBlock"] {gap:0.5rem;}
-/* 修复返回主页按钮被遮挡 */
-.stButton {
-    margin-bottom: 10px;
+/* 把按钮固定在页面最顶部，不会被挡住 */
+div.stButton > button:first-child {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 9999;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# 顶部返回主页按钮（修复位置）
-st.button("🏠 返回主页", key="home_btn")
-if st.session_state.get("home_btn"):
+# 固定在左上角的返回主页按钮
+if st.button("🏠 返回主页"):
     st.switch_page("Home.py")
 
 # ===================== 全局侧边栏 =====================
